@@ -4,4 +4,4 @@ matplotlib
 torch
 torchvision
 pandas
-
+nltk

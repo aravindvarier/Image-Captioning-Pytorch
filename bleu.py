@@ -8,7 +8,7 @@ def compute_average_bleu_over_dataset(model, dataloader, target_sos, target_eos,
     '''Determine the average BLEU score across sequences
     '''
     with torch.no_grad():
-        total_score = 0
+        total_score = [0,0,0,0]
         total_num = 0
         for data in tqdm(dataloader):
             torch.cuda.empty_cache()
@@ -19,9 +19,10 @@ def compute_average_bleu_over_dataset(model, dataloader, target_sos, target_eos,
             b_1 = model(images, on_max='halt')
             captions_cand = b_1[..., 0]
             batch_score = compute_batch_total_bleu(captions_ref, captions_cand, target_sos, target_eos)
-            total_score += batch_score
+            total_score = [total_score[i]+batch_score[i] for i in range(len(total_score))]
 
-        return total_score/total_num
+        total_score = [total_score[i]/total_num for i in range(len(total_score))]
+        return total_score
     
 def compute_batch_total_bleu(captions_ref, captions_cand, target_sos, target_eos):
     '''Compute the total BLEU score over elements in a batch
@@ -39,13 +40,14 @@ def compute_batch_total_bleu(captions_ref, captions_cand, target_sos, target_eos
             refs_list[i] = list(filter((target_eos).__ne__, refs_list[i]))
             cands_list[i] = list(filter((target_eos).__ne__, cands_list[i]))
 
-        total_score = 0
+        total_bleu_scores = [0, 0, 0, 0]
         for i in range(refs.shape[0]):
             ref = refs_list[i]
             cand = cands_list[i]
-            score = BLEU_score(ref, cand, 4)
-            total_score += score
-        return total_score
+            for n in range(len(total_bleu_scores)):
+                score = BLEU_score(ref, cand, n+1)
+                total_bleu_scores[n] += score
+        return total_bleu_scores
 
 
 def grouper(seq, n):
