@@ -21,7 +21,9 @@ test_dir = './dataset/Flickr8k_text/Flickr_8k.testImages.txt'
 
 vocab_file = './vocab.txt'
 
-
+SEED = 123
+torch.manual_seed(SEED)
+np.random.seed(SEED)
 
 
 class Flickr8kDataset(Dataset):
@@ -669,7 +671,8 @@ while epoch <= max_epochs:
 #             best_bleu = bleu_score
     if epoch % 50 == 0:
         model.cpu()
-        torch.save(model.state_dict(), model_save_path + str(epoch) + '.pt')
+        print('Saving Model on Epoch', epoch)
+        torch.save(model.state_dict(), model_save_path + 'LSTMAttention.pt')
         
     epoch += 1
     if epoch > max_epochs:
