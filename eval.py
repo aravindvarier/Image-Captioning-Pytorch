@@ -6,7 +6,9 @@ from PIL import Image
 from tqdm import tqdm
 import warnings
 from nltk.translate.bleu_score import corpus_bleu
-
+from nltk.translate.meteor_score import meteor_score
+import nltk
+nltk.download('wordnet')
 
 class TestDataset(Dataset):
     """Flickr8k dataset."""
@@ -92,7 +94,7 @@ def collater(batch):
 
     return images, all_caps
 
-def get_BLEU_scores(model, device, dataset, dataloader):
+def print_metrics(model, device, dataset, dataloader):
     references = []
     hypotheses = []
     assert(len(dataset.captions) == len(dataset.images))
@@ -122,6 +124,7 @@ def get_BLEU_scores(model, device, dataset, dataloader):
 
         assert(len(references) == len(hypotheses))
         
+        # bleu scores
         bleu_1 = corpus_bleu(references, hypotheses, weights=(1, 0, 0, 0))
         bleu_2 = corpus_bleu(references, hypotheses, weights=(0.5, 0.5, 0, 0))
         bleu_3 = corpus_bleu(references, hypotheses, weights=(0.33, 0.33, 0.33, 0))
@@ -131,3 +134,13 @@ def get_BLEU_scores(model, device, dataset, dataloader):
                   'BLEU-2 ({})\t'
                   'BLEU-3 ({})\t'
                   'BLEU-4 ({})\t'.format(bleu_1, bleu_2, bleu_3, bleu_4))
+
+        # meteor score
+        total_m_score = 0.0
+        
+        for i in range(len(references)):
+            actual = [" ".join(ref) for ref in references[i]]
+            total_m_score += meteor_score(actual, " ".join(hypotheses[i]))
+        
+        print('Meteor Score: {}'.format(total_m_score/len(references)))
+

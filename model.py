@@ -684,6 +684,6 @@ elif mode == "test":
     model.to(device)
     model.eval()
 
-    eval.get_BLEU_scores(model, device, test_data, test_dataloader)
+    eval.print_metrics(model, device, test_data, test_dataloader)
     
 
