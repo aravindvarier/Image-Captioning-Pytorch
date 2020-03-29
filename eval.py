@@ -94,6 +94,40 @@ def collater(batch):
 
     return images, all_caps
 
+def get_output_sentence(model, device, file_path, vocab):
+    image = Image.open(file_path)
+    transform = transforms.Compose([
+        transforms.Resize((224,224)),
+#                 transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    image = transform(image)
+
+    hypotheses = []
+    
+    with torch.no_grad():
+        torch.cuda.empty_cache()
+
+        image = image.unsqueeze(0)
+        image = image.to(device)
+
+        b_1 = model(image, on_max='halt')
+        captions_cand = b_1[..., 0]
+
+        cands = captions_cand.T
+        cands_list = cands.tolist()
+        for i in range(len(cands_list)): #Removes sos tags
+            cands_list[i] = list(filter((0).__ne__, cands_list[i]))
+            cands_list[i] = list(filter((len(vocab)+1).__ne__, cands_list[i]))
+
+        hypotheses += cands_list
+
+    for i in range(len(hypotheses)):
+        hypotheses[i] = [vocab[j] for j in hypotheses[i]]
+
+    return " ".join(hypotheses[0])
+
 def print_metrics(model, device, dataset, dataloader):
     references = []
     hypotheses = []

@@ -648,6 +648,14 @@ model = EncoderDecoder(encoder_class, decoder_class, train_data.vocab_size, targ
                        word_embedding_size=word_embedding_size, cell_type='lstm', beam_width=beam_width, dropout=dropout)
 optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
 
+def predict(model, device, image_name):
+    vocab = []
+    with open(vocab_file, "r") as vocab_f:
+        for line in vocab_f:
+            vocab.append(line.strip())
+    image_path = os.path.join(img_dir, image_name)
+    print(eval.get_output_sentence(model, device, image_path, vocab))
+
 
 if mode == "train":
     best_bleu = 0.
@@ -684,6 +692,8 @@ elif mode == "test":
     model.to(device)
     model.eval()
 
-    eval.print_metrics(model, device, test_data, test_dataloader)
+    predict(model, device, "10815824_2997e03d76.jpg")
+    # eval.print_metrics(model, device, test_data, test_dataloader)
     
+
 
