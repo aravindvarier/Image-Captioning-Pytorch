@@ -11,6 +11,7 @@ from tqdm import tqdm
 import warnings
 import eval
 import bleu
+from transformers import *
 
 img_dir = './dataset/Flickr8k_Dataset/'
 ann_dir = './dataset/Flickr8k_text/Flickr8k.token.txt'
@@ -49,8 +50,8 @@ class Flickr8kDataset(Dataset):
         
         if(transform == None):
             self.transform = transforms.Compose([
-                # transforms.Resize((224,224)),
-#                 transforms.CenterCrop(224),
+                transforms.Resize((224,224)),
+                transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
@@ -174,7 +175,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.enc_image_size = encoded_image_size
 
-        resnet = torchvision.models.resnet101(pretrained=True)  # pretrained ImageNet ResNet-101
+        resnet = models.resnet101(pretrained=True)  # pretrained ImageNet ResNet-101
 
         # Remove linear and pool layers (since we're not doing classification)
         modules = list(resnet.children())[:-2]
@@ -379,7 +380,8 @@ class EncoderDecoder(nn.Module):
     def __init__(
             self, encoder_class, decoder_class,
             target_vocab_size, target_sos=-2, target_eos=-1, encoder_hidden_size=512,
-            decoder_hidden_size=1024, word_embedding_size=1024, cell_type='lstm', beam_width=4, dropout=0.0):
+            decoder_hidden_size=1024, word_embedding_size=1024, cell_type='lstm', decoder_type='rnn', beam_width=4, dropout=0.0,
+            transformer_layers=3, num_heads=1):
         '''Initialize the encoder decoder combo
         '''
         super().__init__()
@@ -390,8 +392,11 @@ class EncoderDecoder(nn.Module):
         self.decoder_hidden_size = decoder_hidden_size
         self.word_embedding_size = word_embedding_size
         self.cell_type = cell_type
+        self.decoder_type = decoder_type
         self.beam_width = beam_width
         self.dropout = dropout
+        self.transformer_layers = transformer_layers
+        self.num_heads = num_heads
         self.encoder = self.decoder = None
         self.init_submodules(encoder_class, decoder_class)
         
@@ -399,13 +404,19 @@ class EncoderDecoder(nn.Module):
         '''Initialize encoder and decoder submodules
         '''
         self.encoder = encoder_class()
-        self.decoder = decoder_class(self.target_vocab_size, 
+        if self.decoder_type == 'rnn':
+            self.decoder = decoder_class(self.target_vocab_size, 
                                     self.target_eos, 
                                     self.word_embedding_size, 
                                     self.encoder_hidden_size, 
                                     self.decoder_hidden_size, 
                                     self.cell_type,
                                     self.dropout)
+        else:
+            self.decoder = decoder_class(self.target_vocab_size, 
+                                    self.encoder_hidden_size,
+                                    self.transformer_layers,
+                                    self.num_heads)
 
     def get_target_padding_mask(self, E):
         '''Determine what parts of a target sequence batch are padding
@@ -446,12 +457,17 @@ class EncoderDecoder(nn.Module):
         h_cur = None
         cur_op = None
         total_attention_weights = []
-        for i in range(len(captions)-1):
-            cur_ip = captions[i]
-            cur_op, h_cur, attention_weights = self.decoder(cur_ip, cur_op, h_cur, h)
-            op.append(cur_op)
-            total_attention_weights.append(attention_weights)
-        return torch.stack(op), torch.stack(total_attention_weights)
+        if self.decoder_type == 'rnn':
+            for i in range(len(captions)-1):
+                cur_ip = captions[i]
+                cur_op, h_cur, attention_weights = self.decoder(cur_ip, cur_op, h_cur, h)
+                op.append(cur_op)
+                total_attention_weights.append(attention_weights)
+            return torch.stack(op), torch.stack(total_attention_weights)
+        else:
+            op, _ = self.decoder(captions[:-1,:].T, h.permute(1,0,2))
+            return op
+        
 
     def beam_search(self, h, max_T, on_max):
         # beam search
@@ -647,14 +663,21 @@ def train_for_epoch(model, dataloader, optimizer, device):
         captions = pad_sequence(captions, padding_value=model.target_eos)
         images, captions, cap_lens = images.to(device), captions.to(device), cap_lens.to(device)
         optimizer.zero_grad()
-        logits, total_attention_weights = model(images, captions) #total_attention_weights -> (L, N, 1)
-        total_attention_weights = total_attention_weights.sum(axis=0).squeeze(2).T
+        if model.decoder_type == 'rnn': 
+            logits, total_attention_weights = model(images, captions) #total_attention_weights -> (L, N, 1)
+            total_attention_weights = total_attention_weights.sum(axis=0).squeeze(2).T
+        else:
+            logits = model(images, captions) #total_attention_weights: (L, N, 1)
+
         captions = captions[1:]
         mask = model.get_target_padding_mask(captions)
         captions = captions.masked_fill(mask,-1)
         loss1 = criterion1(torch.flatten(logits, 0, 1), torch.flatten(captions))
-        loss2 = criterion2(total_attention_weights, torch.ones_like(total_attention_weights))
-        loss = loss1 + lamda * loss2
+        if model.decoder_type == 'rnn':
+            loss2 = criterion2(total_attention_weights, torch.ones_like(total_attention_weights))
+            loss = loss1 + lamda * loss2
+        else:
+            loss = loss1
         total_loss += loss.item()
         total_num += len(cap_lens)
         loss.backward()
@@ -669,37 +692,47 @@ def train_for_epoch(model, dataloader, optimizer, device):
 CNN_channels = 2048 #DO SOMETHING ABOUT THIS
 max_epochs = 100
 beam_width = 4
-decoder_hidden_size = 1800
+
 word_embedding_size = 512
 model_save_path = './model_saves/'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 lamda = 1.
 learning_rate = 0.01
 dropout = 0.5
-batch_size = 64
+batch_size = 32
 grad_clip = 5.
+transformer_layers = 3
+heads = 3
+decoder_type = 'transformer' #transformer, rnn
+
+if decoder_type == 'rnn':
+    decoder_hidden_size = 1800
+else:
+    decoder_hidden_size = CNN_channels
 
 if not os.path.isdir(model_save_path):
     os.mkdir(model_save_path)
 
 train_data = Flickr8kDataset(img_dir, train_dir, ann_dir, vocab_file)
-val_data = Flickr8kDataset(img_dir, val_dir, ann_dir, vocab_file)
+val_data = eval.TestDataset(img_dir, val_dir, ann_dir, vocab_file)
 test_data = eval.TestDataset(img_dir, test_dir, ann_dir, vocab_file)
 
 
 train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=collater)
-val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False, collate_fn=collater)
+val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False, collate_fn=eval.collater)
 test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False, collate_fn=eval.collater)
 
-
-
-
 encoder_class = Encoder
-decoder_class = Decoder
+if decoder_type == 'rnn':
+    decoder_class = Decoder
+else:
+    decoder_class = TransformerDecoder
+
 model = EncoderDecoder(encoder_class, decoder_class, train_data.vocab_size, target_sos=train_data.SOS, 
                       target_eos=train_data.EOS, encoder_hidden_size=CNN_channels, 
                        decoder_hidden_size=decoder_hidden_size, 
-                       word_embedding_size=word_embedding_size, cell_type='lstm', beam_width=beam_width, dropout=dropout)
+                       word_embedding_size=word_embedding_size, decoder_type=decoder_type, cell_type='lstm', beam_width=beam_width, dropout=dropout,
+                       transformer_layers=transformer_layers, num_heads=heads)
 optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
 
 def predict(model, device, image_name):
@@ -719,13 +752,14 @@ if mode == "train":
         model.train()
         loss = train_for_epoch(model, train_dataloader, optimizer, device)
         model.eval()
-        bleu_score = bleu.compute_average_bleu_over_dataset(
-            model, val_dataloader,
-            val_data.SOS,
-            val_data.EOS,
-            device,
-        )
-        print(f'Epoch {epoch}: loss={loss}, BLEU={bleu_score}')
+        # bleu_score = bleu.compute_average_bleu_over_dataset(
+        #     model, val_dataloader,
+        #     val_data.SOS,
+        #     val_data.EOS,
+        #     device,
+        # )
+        # print(f'Epoch {epoch}: loss={loss}, BLEU={bleu_score}')
+        eval.print_metrics(model, device, val_data, val_dataloader)
     #     print(f'Epoch {epoch}: loss={loss}')
     #         if bleu_score < best_bleu:
     #             num_poor += 1
