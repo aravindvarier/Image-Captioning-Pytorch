@@ -4,13 +4,16 @@ from torch.nn.utils.rnn import pad_sequence
 from torchvision import transforms
 import torchvision.models as models
 import torch.nn as nn
+import numpy as np
 import os
 import matplotlib.pyplot as plt
 from PIL import Image
 from tqdm import tqdm
 import warnings
-import eval
+
 import bleu
+
+from temp import *
 
 img_dir = './dataset/Flickr8k_Dataset/'
 ann_dir = './dataset/Flickr8k_text/Flickr8k.token.txt'
@@ -20,10 +23,8 @@ test_dir = './dataset/Flickr8k_text/Flickr_8k.testImages.txt'
 
 vocab_file = './vocab.txt'
 
-SEED = 123
-torch.manual_seed(SEED)
 
-mode = 'train'
+
 
 class Flickr8kDataset(Dataset):
     """Flickr8k dataset."""
@@ -49,7 +50,7 @@ class Flickr8kDataset(Dataset):
         
         if(transform == None):
             self.transform = transforms.Compose([
-                # transforms.Resize((224,224)),
+                transforms.Resize((224,224)),
 #                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -155,59 +156,18 @@ def display_sample(sample):
 
 
 class Encoder(nn.Module):
-    # def __init__(self):
-    #     super(Encoder, self).__init__()
-        
-    #     self.model = models.resnet101(pretrained=True)
-    #     self.model = nn.Sequential(*(list(self.model.children())[:8]))
-    #     self.model.requires_grad_(False)
-        
-    # def forward(self, x):
-    #     x = self.model(x)
-    #     x = torch.flatten(x,2,3)
-    #     x = x.permute(2,0,1)
-    #     return x
-    """
-    Encoder.
-    """
-    def __init__(self, encoded_image_size=14):
+    def __init__(self):
         super(Encoder, self).__init__()
-        self.enc_image_size = encoded_image_size
-
-        resnet = torchvision.models.resnet101(pretrained=True)  # pretrained ImageNet ResNet-101
-
-        # Remove linear and pool layers (since we're not doing classification)
-        modules = list(resnet.children())[:-2]
-        self.resnet = nn.Sequential(*modules)
-
-        # Resize image to fixed size to allow input images of variable size
-        self.adaptive_pool = nn.AdaptiveAvgPool2d((encoded_image_size, encoded_image_size))
-
-        self.fine_tune()
-
-    def forward(self, images):
-        """
-        Forward propagation.
-        :param images: images, a tensor of dimensions (batch_size, 3, image_size, image_size)
-        :return: encoded images
-        """
-        out = self.resnet(images)  # (batch_size, 2048, image_size/32, image_size/32)
-        out = self.adaptive_pool(out)  # (batch_size, 2048, encoded_image_size, encoded_image_size)
-        out = torch.flatten(out,2,3)  #(batch_size, 2048, encoded_image_size * encoded_image_size)
-        out = out.permute(2, 0, 1)  # (encoded_image_size * encoded_image_size, batch_size, 2048)
-        return out
-
-    def fine_tune(self, fine_tune=False):
-        """
-        Allow or prevent the computation of gradients for convolutional blocks 2 through 4 of the encoder.
-        :param fine_tune: Allow?
-        """
-        for p in self.resnet.parameters():
-            p.requires_grad = False
-        # If fine-tuning, only fine-tune convolutional blocks 2 through 4
-        for c in list(self.resnet.children())[5:]:
-            for p in c.parameters():
-                p.requires_grad = fine_tune
+        
+        self.model = models.resnet18(pretrained=True)
+        self.model = nn.Sequential(*(list(self.model.children())[:8]))
+        self.model.requires_grad_(False)
+        
+    def forward(self, x):
+        x = self.model(x)
+        x = torch.flatten(x,2,3)
+        x = x.permute(2,0,1)
+        return x
 
 
 
@@ -253,6 +213,8 @@ class AdditiveAttention(nn.Module):
         beta = self.beta_network(queries)
         context = context * beta.unsqueeze(1)
         return context, attention_weights
+
+
 
 
 class MLP_init(nn.Module):
@@ -306,16 +268,13 @@ class Decoder(nn.Module):
         else:
             self.cell = nn.LSTMCell(input_size=self.word_embedding_size + self.encoder_hidden_state_size, hidden_size=self.decoder_hidden_state_size)
         
-        self.ff_out = nn.Linear(self.word_embedding_size , self.target_vocab_size)
+        self.ff_out = nn.Linear(self.word_embedding_size + self.decoder_hidden_state_size + self.encoder_hidden_state_size, self.target_vocab_size)
         
         self.ff_init_h = MLP_init(encoder_hidden_size=self.encoder_hidden_state_size, decoder_hidden_size=self.decoder_hidden_state_size)
         self.ff_init_c = MLP_init(encoder_hidden_size=self.encoder_hidden_state_size, decoder_hidden_size=self.decoder_hidden_state_size)
         
         self.attention_net = AdditiveAttention(encoder_hidden_size=self.encoder_hidden_state_size, decoder_hidden_size=self.decoder_hidden_state_size)
         self.dropout = nn.Dropout(p=self.dropout)
-
-        self.output_linear_1 = nn.Linear(self.decoder_hidden_state_size, self.word_embedding_size)
-        self.output_linear_2 = nn.Linear(self.encoder_hidden_state_size, self.word_embedding_size)
 
     def forward(self, E_tm1, y_tm1, htilde_tm1, h):
         if htilde_tm1 is None:
@@ -368,7 +327,7 @@ class Decoder(nn.Module):
         '''Calculate an un-normalized log distribution over target words
         Uses the deep output layer as described in the paper
         '''
-        logits_t = self.ff_out(self.dropout(self.output_linear_1(htilde_t) + y_tm1 + self.output_linear_2(ctx_t)))
+        logits_t = self.ff_out(self.dropout(torch.cat([htilde_t, y_tm1, ctx_t], axis=1)))
         return logits_t
 
 
@@ -379,7 +338,8 @@ class EncoderDecoder(nn.Module):
     def __init__(
             self, encoder_class, decoder_class,
             target_vocab_size, target_sos=-2, target_eos=-1, encoder_hidden_size=512,
-            decoder_hidden_size=1024, word_embedding_size=1024, cell_type='lstm', beam_width=4, dropout=0.0):
+            decoder_hidden_size=1024, word_embedding_size=1024, cell_type='lstm', beam_width=4, dropout=0.0,
+            transformer_layers=3, num_heads=1):
         '''Initialize the encoder decoder combo
         '''
         super().__init__()
@@ -392,6 +352,8 @@ class EncoderDecoder(nn.Module):
         self.cell_type = cell_type
         self.beam_width = beam_width
         self.dropout = dropout
+        self.transformer_layers = transformer_layers
+        self.num_heads = num_heads
         self.encoder = self.decoder = None
         self.init_submodules(encoder_class, decoder_class)
         
@@ -399,13 +361,17 @@ class EncoderDecoder(nn.Module):
         '''Initialize encoder and decoder submodules
         '''
         self.encoder = encoder_class()
+        # self.decoder = decoder_class(self.target_vocab_size, 
+        #                             self.target_eos, 
+        #                             self.word_embedding_size, 
+        #                             self.encoder_hidden_size, 
+        #                             self.decoder_hidden_size, 
+        #                             self.cell_type,
+        #                             self.dropout)
         self.decoder = decoder_class(self.target_vocab_size, 
-                                    self.target_eos, 
-                                    self.word_embedding_size, 
-                                    self.encoder_hidden_size, 
-                                    self.decoder_hidden_size, 
-                                    self.cell_type,
-                                    self.dropout)
+                                    self.encoder_hidden_size,
+                                    self.transformer_layers,
+                                    self.num_heads)
 
     def get_target_padding_mask(self, E):
         '''Determine what parts of a target sequence batch are padding
@@ -441,17 +407,25 @@ class EncoderDecoder(nn.Module):
 
     def get_logits_for_teacher_forcing(self, h, captions):
         '''Get un-normed distributions over next tokens via teacher forcing
+        h: seq_len x batch_size x hidden_size
+        captions : seq_len x batch_size
         '''
         op = []
         h_cur = None
         cur_op = None
         total_attention_weights = []
-        for i in range(len(captions)-1):
-            cur_ip = captions[i]
-            cur_op, h_cur, attention_weights = self.decoder(cur_ip, cur_op, h_cur, h)
-            op.append(cur_op)
-            total_attention_weights.append(attention_weights)
-        return torch.stack(op), torch.stack(total_attention_weights)
+        # for i in range(len(captions)-1):
+        #     cur_ip = captions[i]
+        #     cur_op, h_cur, attention_weights = self.decoder(cur_ip, cur_op, h_cur, h)
+        #     op.append(cur_op)
+        #     total_attention_weights.append(attention_weights)
+
+
+        op, _ = self.decoder(captions[:-1,:].T, h.permute(1,0,2))
+
+
+        # return torch.stack(op), torch.stack(total_attention_weights)
+        return op
 
     def beam_search(self, h, max_T, on_max):
         # beam search
@@ -487,9 +461,7 @@ class EncoderDecoder(nn.Module):
         while torch.any(b_tm1_1[-1, :, 0] != self.target_eos):
             if t == max_T:
                 if on_max == 'raise':
-                    raise RuntimeError(
-                        f'Beam search has not finished by t={t}. Increase the '
-                        f'number of parameters and train longer')
+                    raise RuntimeError(f'Beam search has not finished by t={t}. Increase the number of parameters and train longer')
                 elif on_max == 'halt':
                     warnings.warn(f'Beam search not finished by t={t}. Halted')
                     break
@@ -618,16 +590,7 @@ class EncoderDecoder(nn.Module):
 
         return b_t_0, b_t_1, logpb_t
 
-def clip_gradient(optimizer, grad_clip):
-    """
-    Clips gradients computed during backpropagation to avoid explosion of gradients.
-    :param optimizer: optimizer with the gradients to be clipped
-    :param grad_clip: clip value
-    """
-    for group in optimizer.param_groups:
-        for param in group['params']:
-            if param.grad is not None:
-                param.grad.data.clamp_(-grad_clip, grad_clip)
+
 
 def train_for_epoch(model, dataloader, optimizer, device):
     '''Train an EncoderDecoder for an epoch
@@ -644,110 +607,95 @@ def train_for_epoch(model, dataloader, optimizer, device):
     total_num = 0
     for data in tqdm(dataloader):
         images, captions, cap_lens = data
-        captions = pad_sequence(captions, padding_value=model.target_eos)
+        captions = pad_sequence(captions, padding_value=model.target_eos)  # seq_len x batch_size
         images, captions, cap_lens = images.to(device), captions.to(device), cap_lens.to(device)
         optimizer.zero_grad()
-        logits, total_attention_weights = model(images, captions) #total_attention_weights -> (L, N, 1)
-        total_attention_weights = total_attention_weights.sum(axis=0).squeeze(2).T
+        # logits, total_attention_weights = model(images, captions) #total_attention_weights: (L, N, 1)
+        logits = model(images, captions) #total_attention_weights: (L, N, 1)
+        # total_attention_weights = total_attention_weights.sum(axis=0).squeeze(2).T
         captions = captions[1:]
         mask = model.get_target_padding_mask(captions)
         captions = captions.masked_fill(mask,-1)
         loss1 = criterion1(torch.flatten(logits, 0, 1), torch.flatten(captions))
-        loss2 = criterion2(total_attention_weights, torch.ones_like(total_attention_weights))
-        loss = loss1 + lamda * loss2
+        # loss2 = criterion2(total_attention_weights, torch.ones_like(total_attention_weights))
+        # loss = loss1 + lamda * loss2
+        loss = loss1
         total_loss += loss.item()
         total_num += len(cap_lens)
         loss.backward()
-        if grad_clip is not None:
-            clip_gradient(optimizer, grad_clip)
         optimizer.step()
     return total_loss/total_num
 
 
 
 
-CNN_channels = 2048 #DO SOMETHING ABOUT THIS
+CNN_channels = 512 #DO SOMETHING ABOUT THIS
 max_epochs = 100
 beam_width = 4
-decoder_hidden_size = 1800
+decoder_hidden_size = 512
 word_embedding_size = 512
 model_save_path = './model_saves/'
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda'
 lamda = 1.
 learning_rate = 0.01
 dropout = 0.5
 batch_size = 64
-grad_clip = 5.
+transformer_layers = 3
+heads = 3
+decoder_type = 'transformer' #transformer, rnn
 
 if not os.path.isdir(model_save_path):
     os.mkdir(model_save_path)
 
 train_data = Flickr8kDataset(img_dir, train_dir, ann_dir, vocab_file)
 val_data = Flickr8kDataset(img_dir, val_dir, ann_dir, vocab_file)
-test_data = eval.TestDataset(img_dir, test_dir, ann_dir, vocab_file)
+test_data = Flickr8kDataset(img_dir, test_dir, ann_dir, vocab_file)
 
 
 train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=collater)
 val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False, collate_fn=collater)
-test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False, collate_fn=eval.collater)
 
 
 
 
 encoder_class = Encoder
-decoder_class = Decoder
+# decoder_class = Decoder
+decoder_class = TransformerDecoder
 model = EncoderDecoder(encoder_class, decoder_class, train_data.vocab_size, target_sos=train_data.SOS, 
                       target_eos=train_data.EOS, encoder_hidden_size=CNN_channels, 
                        decoder_hidden_size=decoder_hidden_size, 
-                       word_embedding_size=word_embedding_size, cell_type='lstm', beam_width=beam_width, dropout=dropout)
+                       word_embedding_size=word_embedding_size, cell_type='lstm', beam_width=beam_width, dropout=dropout,
+                       transformer_layers=transformer_layers, num_heads=heads)
 optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
 
-def predict(model, device, image_name):
-    vocab = []
-    with open(vocab_file, "r") as vocab_f:
-        for line in vocab_f:
-            vocab.append(line.strip())
-    image_path = os.path.join(img_dir, image_name)
-    print(eval.get_output_sentence(model, device, image_path, vocab))
 
-
-if mode == "train":
-    best_bleu = 0.
-    epoch = 1
-    while epoch <= max_epochs:
-        model.to(device)
-        model.train()
-        loss = train_for_epoch(model, train_dataloader, optimizer, device)
-        model.eval()
-        bleu_score = bleu.compute_average_bleu_over_dataset(
-            model, val_dataloader,
-            val_data.SOS,
-            val_data.EOS,
-            device,
-        )
-        print(f'Epoch {epoch}: loss={loss}, BLEU={bleu_score}')
-    #     print(f'Epoch {epoch}: loss={loss}')
-    #         if bleu_score < best_bleu:
-    #             num_poor += 1
-    #         else:
-    #             num_poor = 0
-    #             best_bleu = bleu_score
-        if epoch % 50 == 0:
-            model.cpu()
-            print('Saving Model on Epoch', epoch)
-            torch.save(model.state_dict(), model_save_path + 'LSTMAttention.pt')
-            
-        epoch += 1
-        if epoch > max_epochs:
-            print(f'Finished {max_epochs} epochs')
-        torch.cuda.empty_cache()
-elif mode == "test":
-    model.load_state_dict(torch.load(model_save_path + '50.pt'))
+best_bleu = 0.
+epoch = 1
+while epoch <= max_epochs:
     model.to(device)
+    model.train()
+    loss = train_for_epoch(model, train_dataloader, optimizer, device)
     model.eval()
-
-    predict(model, device, "10815824_2997e03d76.jpg")
-    # eval.print_metrics(model, device, test_data, test_dataloader)
+    bleu_score = bleu.compute_average_bleu_over_dataset(
+        model, val_dataloader,
+        val_data.SOS,
+        val_data.EOS,
+        device,
+    )
+    print(f'Epoch {epoch}: loss={loss}, BLEU={bleu_score}')
+#     print(f'Epoch {epoch}: loss={loss}')
+#         if bleu_score < best_bleu:
+#             num_poor += 1
+#         else:
+#             num_poor = 0
+#             best_bleu = bleu_score
+    if epoch % 50 == 0:
+        model.cpu()
+        torch.save(model.state_dict(), model_save_path + str(epoch) + '.pt')
+        
+    epoch += 1
+    if epoch > max_epochs:
+        print(f'Finished {max_epochs} epochs')
+    torch.cuda.empty_cache()
     
-
 
