@@ -11,6 +11,7 @@ from tqdm import tqdm
 import warnings
 import eval
 import bleu
+import utils
 import string
 
 from models import *
@@ -58,20 +59,6 @@ class Flickr8kDataset(Dataset):
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
     
-    def clean_description(self, desc):
-        # prepare translation table for removing punctuation
-        table = str.maketrans('', '', string.punctuation)
-        # # tokenize
-        # desc = desc.split()
-        # convert to lower case
-        desc = [word.lower() for word in desc]
-        # remove punctuation from each token
-        desc = [w.translate(table) for w in desc]
-        # remove hanging 's' and 'a'
-        desc = [word for word in desc if len(word)>1]
-
-        return desc
-    
     def tokenizer(self, split_dir, ann_dir):
         image_file_names = []
         captions = []
@@ -83,7 +70,7 @@ class Flickr8kDataset(Dataset):
         with open(ann_dir, "r") as ann_f:
             for line in ann_f:
                 if line.split("#")[0] + "\n" in sub_lines:
-                    caption = self.clean_description(line.split()[1:])
+                    caption = utils.clean_description(line.split()[1:])
                     image_file_names.append(line.split()[0])
                     captions.append(caption)
 
@@ -254,7 +241,7 @@ model_save_path = './model_saves/'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 lamda = 1.
 if decoder_type == 'rnn':
-    learning_rate = 0.005
+    learning_rate = 0.01
     decoder_hidden_size = 1800
     dropout = 0.5
 else:    

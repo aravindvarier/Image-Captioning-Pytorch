@@ -9,6 +9,8 @@ from nltk.translate.bleu_score import corpus_bleu
 from nltk.translate.meteor_score import meteor_score
 import nltk
 nltk.download('wordnet')
+import utils
+
 
 class TestDataset(Dataset):
     """Flickr8k dataset."""
@@ -52,7 +54,7 @@ class TestDataset(Dataset):
             for line in ann_f:
                 if line.split("#")[0] + "\n" in sub_lines:
                     image_file = line.split('#')[0]
-                    caption = line.split()[1:]
+                    caption = utils.clean_description(line.split()[1:])
                     if image_file in all_captions:
                         all_captions[image_file].append(caption)
                     else:
