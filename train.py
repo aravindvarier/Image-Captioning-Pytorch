@@ -11,6 +11,7 @@ from tqdm import tqdm
 import warnings
 import eval
 import bleu
+import string
 
 from models import *
 
@@ -56,7 +57,20 @@ class Flickr8kDataset(Dataset):
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
-        
+    
+    def clean_description(self, desc):
+        # prepare translation table for removing punctuation
+        table = str.maketrans('', '', string.punctuation)
+        # # tokenize
+        # desc = desc.split()
+        # convert to lower case
+        desc = [word.lower() for word in desc]
+        # remove punctuation from each token
+        desc = [w.translate(table) for w in desc]
+        # remove hanging 's' and 'a'
+        desc = [word for word in desc if len(word)>1]
+
+        return desc
     
     def tokenizer(self, split_dir, ann_dir):
         image_file_names = []
@@ -69,8 +83,9 @@ class Flickr8kDataset(Dataset):
         with open(ann_dir, "r") as ann_f:
             for line in ann_f:
                 if line.split("#")[0] + "\n" in sub_lines:
+                    caption = self.clean_description(line.split()[1:])
                     image_file_names.append(line.split()[0])
-                    captions.append(line.split()[1:])
+                    captions.append(caption)
 
 
         vocab = []
@@ -221,13 +236,12 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
         if grad_clip is not None:
             clip_gradient(optimizer, grad_clip)
         optimizer.step()
-        if model.decoder_type == 'transformer':
-            adjust_optim(optimizer, n_iter, warmup_steps)
+        adjust_optim(optimizer, n_iter, warmup_steps)
         n_iter += 1
     return total_loss/total_num, n_iter
 
 
-decoder_type = 'transformer' #transformer, rnn
+decoder_type = 'rnn' #transformer, rnn
 warmup_steps = 4000
 
 CNN_channels = 512 #DO SOMETHING ABOUT THIS, 2048 for resnet101
@@ -240,7 +254,7 @@ model_save_path = './model_saves/'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 lamda = 1.
 if decoder_type == 'rnn':
-    learning_rate = 0.01
+    learning_rate = 0.005
     decoder_hidden_size = 1800
     dropout = 0.5
 else:    
@@ -306,10 +320,10 @@ if mode == "train":
     #         else:
     #             num_poor = 0
     #             best_bleu = bleu_score
-        if epoch % 50 == 0:
+        if epoch % 10 == 0:
             model.cpu()
             print('Saving Model on Epoch', epoch)
-            torch.save(model.state_dict(), model_save_path + 'LSTMAttention.pt')
+            torch.save(model.state_dict(), model_save_path + f'epoch{epoch}.pt')
             
         epoch += 1
         if epoch > max_epochs:
