@@ -221,7 +221,8 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
         if grad_clip is not None:
             clip_gradient(optimizer, grad_clip)
         optimizer.step()
-        adjust_optim(optimizer, n_iter, warmup_steps)
+        if model.decoder_type == 'transformer':
+            adjust_optim(optimizer, n_iter, warmup_steps)
         n_iter += 1
     return total_loss/total_num, n_iter
 

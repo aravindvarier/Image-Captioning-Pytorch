@@ -239,10 +239,6 @@ class Decoder(nn.Module):
         logits_t = self.ff_out(self.dropout(self.output_linear_1(htilde_t) + y_tm1 + self.output_linear_2(ctx_t)))
         return logits_t
 
-import torch
-import torch.nn as nn
-from torchvision import transforms
-import numpy as np
 class ScaledDotAttention(nn.Module):
     def __init__(self, hidden_size):
         super(ScaledDotAttention, self).__init__()
