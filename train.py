@@ -54,7 +54,7 @@ class Flickr8kDataset(Dataset):
         if(transform == None):
             self.transform = transforms.Compose([
                 transforms.Resize((224,224)),
-                transforms.CenterCrop(224),
+                # transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
@@ -198,7 +198,7 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
     total_num = 0
     for data in tqdm(dataloader):
         images, captions, cap_lens = data
-        captions = pad_sequence(captions, padding_value=model.target_eos)
+        captions = pad_sequence(captions, padding_value=model.target_eos) #(seq_len, batch_size)
         images, captions, cap_lens = images.to(device), captions.to(device), cap_lens.to(device)
         optimizer.zero_grad()
         if model.decoder_type == 'rnn': 
@@ -223,7 +223,8 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
         if grad_clip is not None:
             clip_gradient(optimizer, grad_clip)
         optimizer.step()
-        adjust_optim(optimizer, n_iter, warmup_steps)
+        if model.decoder_type == 'transformer':
+            adjust_optim(optimizer, n_iter, warmup_steps)
         n_iter += 1
     return total_loss/total_num, n_iter
 

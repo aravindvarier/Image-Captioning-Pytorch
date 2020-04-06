@@ -126,7 +126,7 @@ def get_output_sentence(model, device, file_path, vocab):
         hypotheses += cands_list
 
     for i in range(len(hypotheses)):
-        hypotheses[i] = [vocab[j] for j in hypotheses[i]]
+        hypotheses[i] = [vocab[j - 1] for j in hypotheses[i]]
 
     return " ".join(hypotheses[0])
 
@@ -156,7 +156,7 @@ def print_metrics(model, device, dataset, dataloader):
             hypotheses += cands_list
 
         for i in range(len(references)):
-            hypotheses[i] = [dataset.vocab[j] for j in hypotheses[i]]
+            hypotheses[i] = [dataset.vocab[j - 1] for j in hypotheses[i]]
 
         assert(len(references) == len(hypotheses))
         

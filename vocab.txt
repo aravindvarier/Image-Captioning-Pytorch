@@ -1015,22 +1015,6 @@ marching
 band
 teenager
 trumped
-starbucks
-samples
-fair
-apron
-serving
-drinks
-tray
-barista
-offering
-waitress
-offers
-complimentary
-tea
-patrons
-try
-full
 sledge
 plain
 loading
@@ -1191,6 +1175,7 @@ cans
 aluminum
 vendor
 selling
+drinks
 stall
 hatted
 males
@@ -1383,6 +1368,7 @@ wakeboarding
 younger
 watercraft
 renaissance
+fair
 costumes
 arrows
 booth
@@ -1744,6 +1730,7 @@ snowboarding
 leaf
 saddle
 tub
+full
 container
 squeeze
 bath
@@ -1977,6 +1964,7 @@ dip
 plates
 buffet
 serve
+serving
 plate
 peek
 trunk
@@ -1992,6 +1980,7 @@ gloves
 wrapping
 speaking
 box
+tray
 hurdle
 spaniel
 clears
@@ -2089,6 +2078,7 @@ ridden
 markers
 jomps
 disc
+try
 mosscovered
 traversing
 ciff
@@ -2212,10 +2202,6 @@ hi
 viz
 trapped
 ravine
-batter
-yankees
-yankee
-warming
 padded
 training
 attack
@@ -2273,11 +2259,8 @@ brook
 meanders
 autumn
 scuba
-gloved
-diver
-snorkel
-submerged
 lobster
+diver
 crustacean
 found
 hall
@@ -2511,6 +2494,7 @@ antiquated
 pearl
 opposite
 lights
+submerged
 sinking
 toyota
 corn
@@ -2532,9 +2516,6 @@ fencedin
 link
 silhouette
 buy
-pedestrians
-times
-square
 auditorium
 programs
 students
@@ -2663,13 +2644,6 @@ huskies
 wheeled
 canyon
 hike
-jogger
-sheltered
-runner
-assists
-marathon
-13406
-rainy
 pours
 dim
 stomach
@@ -2712,7 +2686,6 @@ rocker
 spotters
 tried
 barely
-climbed
 carpeting
 redseated
 leashes
@@ -3023,7 +2996,6 @@ unfurled
 fold
 gathering
 used
-gliding
 kill
 weirmeiner
 collars
@@ -3175,9 +3147,6 @@ steamy
 rapid
 kayacker
 downstream
-mani
-calmer
-pyranha
 rear
 whose
 snowman
@@ -3384,8 +3353,6 @@ claus
 figurine
 st
 bernard
-rollerskate
-rollerblade
 passed
 frowning
 receives
@@ -3608,6 +3575,7 @@ nd
 fancy
 tilts
 upward
+gloved
 glove
 groucho
 marx
@@ -3668,10 +3636,6 @@ tourist
 location
 wade
 mushrooms
-clown
-whistle
-blows
-muffs
 establishment
 dimlylit
 crime
@@ -3772,6 +3736,7 @@ wintery
 sitts
 melted
 wizards
+square
 fill
 packed
 climing
@@ -3817,6 +3782,7 @@ images
 foreign
 umbrellas
 stay
+rainy
 asia
 pocket
 backside
@@ -3825,6 +3791,7 @@ donkey
 brake
 mule
 nonworking
+sheltered
 sleeps
 breaching
 rimmed
@@ -3874,6 +3841,7 @@ launched
 warily
 investigating
 sweat
+blows
 youn
 piggyback
 adorned
@@ -3981,7 +3949,6 @@ rubbing
 lounging
 huskylike
 samoyads
-pure
 melting
 awaits
 wicker
@@ -4105,7 +4072,6 @@ froup
 unusual
 trench
 jetty
-looked
 rockface
 spotting
 nurses
@@ -4203,13 +4169,6 @@ slalomlike
 zigzag
 policeman
 queue
-buddist
-worships
-buddha
-prays
-shrine
-monk
-praying
 slacks
 parasails
 sail
@@ -4245,13 +4204,13 @@ widelegged
 blackandwhite
 monster
 ridable
-tipped
 stubby
 ceremony
 keep
 wards
 dane
 dachshund
+apron
 electronics
 engage
 devices
@@ -4302,6 +4261,7 @@ timeout
 everyone
 ou
 coaching
+looked
 injured
 nursed
 attempted
@@ -4359,6 +4319,7 @@ anthem
 staff
 manager
 nike
+whistle
 excercises
 stretches
 turf
@@ -4388,6 +4349,7 @@ chained
 girt
 messenger
 paneled
+marathon
 comfort
 moonwalk
 sundress
@@ -4723,6 +4685,7 @@ spills
 noy
 followed
 subdivsion
+pedestrians
 meandering
 casually
 blazer
@@ -4764,8 +4727,6 @@ level
 than
 breaker
 bonnets
-tumbles
-tips
 squeezes
 crevasse
 bathrobe
@@ -4802,6 +4763,7 @@ lampost
 undershirt
 contestants
 pattern
+jogger
 shoeless
 bluetinted
 rusty
@@ -4831,7 +4793,6 @@ stiped
 loose
 law
 enforcement
-sheepdog
 reception
 butting
 lightly
@@ -4847,6 +4808,7 @@ shoe
 cotton
 sandal
 bust
+buddha
 safari
 shrowded
 darkness
@@ -4901,9 +4863,6 @@ dinghy
 grasses
 stride
 surges
-pops
-popping
-parkinglot
 chews
 wheat
 striding
@@ -5022,6 +4981,7 @@ explosion
 occured
 engulf
 parachuter
+gliding
 operated
 fourwheeled
 smokestacks
@@ -5057,6 +5017,7 @@ soldier
 march
 banners
 representing
+times
 judge
 baring
 outstreched
@@ -5123,6 +5084,7 @@ adjusts
 aggressive
 fit
 skill
+clown
 entertains
 mime
 overweight
@@ -5143,6 +5105,7 @@ paperwork
 rack
 magazines
 browsing
+monk
 swimsuites
 twirling
 streamers
@@ -5181,6 +5144,7 @@ rugby
 leaped
 effort
 loan
+runner
 participates
 nipple
 nipples
@@ -5196,6 +5160,7 @@ model
 cloak
 revealing
 extravagant
+sheepdog
 county
 herd
 whipping
@@ -5238,7 +5203,7 @@ highland
 dozes
 genetic
 freak
-snout
+offers
 broadly
 classes
 booths
@@ -5253,7 +5218,6 @@ bulls
 hundreds
 partake
 bullrun
-specialized
 award
 pinned
 displays
@@ -5305,7 +5269,6 @@ vat
 discovery
 incoming
 crudely
-onlooker
 bulging
 drivers
 directs
@@ -5401,8 +5364,6 @@ captured
 senior
 mill
 sling
-skydiving
-skydivers
 cascading
 drooling
 barettes
@@ -5476,6 +5437,7 @@ lack
 regains
 composure
 trailing
+snorkel
 completes
 alotment
 clibing
@@ -5493,11 +5455,6 @@ spool
 cable
 pice
 machinery
-strawberry
-turtle
-tortoise
-berry
-fed
 astride
 clips
 carabiner
@@ -5594,6 +5551,8 @@ gap
 closeby
 rooftop
 competitively
+rollerblade
+popping
 burst
 experimenter
 breathes
@@ -5671,6 +5630,7 @@ backflips
 bikina
 saroog
 sarongs
+tips
 tip
 pinkish
 vans
@@ -5697,7 +5657,6 @@ conversing
 eyebrows
 midspeach
 multipiercings
-battles
 tonge
 confused
 grouchy
@@ -5779,7 +5738,9 @@ loader
 congregation
 worshipping
 temple
+shrine
 worshippers
+specialized
 producing
 scraping
 pumpkins
@@ -5872,10 +5833,6 @@ steamboat
 exploring
 riverboat
 draw
-lioness
-prey
-bison
-wildebeest
 brass
 jazz
 saxaphones
@@ -5885,9 +5842,6 @@ ladie
 untangles
 puck
 exception
-singer
-belts
-tune
 headlights
 haystacks
 bodysuit
@@ -5944,8 +5898,6 @@ handling
 buss
 london
 ferrett
-personnel
-stomachs
 cemetery
 stereo
 wetsuits
@@ -5967,17 +5919,9 @@ plugging
 pacman
 obama
 desolate
-08
-campaign
-supporter
-2008
-presidential
-election
-biden
-candidate
-mate
 democrat
 supporters
+election
 political
 chris
 gregoire
@@ -5995,6 +5939,8 @@ portable
 toilets
 portapotties
 bathrooms
+campaign
+supporter
 barack
 touts
 riwal
@@ -6034,7 +5980,6 @@ passers
 story
 secondstory
 pulleys
-prop
 blood
 hunter
 characters
@@ -6086,7 +6031,6 @@ sifting
 tripped
 garb
 waterpark
-minor
 looker
 spill
 zipping
@@ -6176,12 +6120,6 @@ swordsman
 wanders
 playgroud
 wipeout
-ambulance
-hauled
-wrecked
-recked
-flatbed
-collision
 plan
 biplane
 word
@@ -6216,6 +6154,7 @@ abarrotes
 pokemon
 wetsuite
 steeple
+prey
 ashtray
 sole
 bowled
@@ -6259,6 +6198,7 @@ mitten
 highflying
 forests
 lakes
+singer
 buttondown
 stange
 snowploe
@@ -6281,7 +6221,6 @@ skit
 samsung
 90
 degrees
-mingle
 jockeys
 windsurf
 surgical
@@ -6348,9 +6287,6 @@ groomsmen
 entire
 reddressed
 aisle
-kingsworth
-coal
-protesting
 snowpile
 classical
 packages
@@ -6375,6 +6311,7 @@ wintry
 blooming
 cropped
 santas
+praying
 meditating
 prayer
 san
@@ -6427,6 +6364,7 @@ burn
 billowing
 smoky
 twig
+samples
 seafood
 pursed
 seaside
@@ -6469,13 +6407,6 @@ indicating
 expanding
 strand
 strung
-falcon
-pursues
-rodent
-flees
-hawk
-closing
-swoops
 surrounds
 fanny
 entrance
@@ -6536,7 +6467,6 @@ ripping
 hurricanes
 gingerbread
 straddling
-percussionists
 throat
 choke
 joking
@@ -6551,7 +6481,6 @@ acrouss
 busying
 mowed
 aboriginal
-paraglides
 recliner
 elephant
 brightcolored
@@ -6612,6 +6541,7 @@ unzipping
 kawasaki
 paying
 headwrap
+rodent
 buoy
 wellmuscled
 know
@@ -6646,10 +6576,6 @@ culprit
 wipe
 advances
 dominant
-pain
-curls
-ended
-loser
 mantle
 jaws
 acoustic
@@ -6784,9 +6710,9 @@ mike
 eldery
 interviewed
 interviews
-cycler
 magenta
 reacts
+swoops
 constructed
 dacshund
 swooping
@@ -6798,8 +6724,6 @@ frayed
 pawed
 streches
 gatorade
-contorts
-ballplayer
 93
 snoring
 knelt
@@ -6814,7 +6738,6 @@ zippered
 ability
 heights
 tobaggan
-idea
 crosswalks
 policeperson
 id
@@ -6840,7 +6763,6 @@ oppose
 wintergear
 historic
 solo
-pugs
 limousine
 limo
 hackey
@@ -6935,6 +6857,7 @@ cautiously
 sure
 apartments
 roofs
+patrons
 siren
 thatched
 outwards
@@ -6955,11 +6878,6 @@ railway
 newspapers
 flighht
 manicured
-live
-cabana
-silhouettes
-ovals
-lettering
 dear
 doe
 comforter
@@ -6999,6 +6917,7 @@ north
 carolina
 gauntlet
 radio
+offering
 advertizing
 say
 lanterns
@@ -7017,6 +6936,7 @@ common
 comforting
 consoling
 rotweiler
+batter
 perfors
 rust
 holing
@@ -7047,8 +6967,6 @@ guitars
 gust
 flurry
 gnaws
-troupe
-ballons
 signage
 griding
 outfitted
@@ -7068,13 +6986,9 @@ reflects
 inspect
 wisks
 barechested
-charges
-charging
 rips
 stork
 donations
-pressed
-grasp
 shotongoal
 knocked
 circumvents
@@ -7135,7 +7049,6 @@ vision
 roiling
 dumpster
 ally
-rehearsing
 ninjalike
 rangers
 ranger
@@ -7147,7 +7060,6 @@ yougn
 tucking
 brushland
 greenglow
-mallard
 threeway
 dressedup
 dimlight
@@ -7163,8 +7075,8 @@ pleople
 kilts
 taped
 stoplight
-gleaming
 freefalling
+skydivers
 trio
 waded
 ballplayers
@@ -7229,6 +7141,7 @@ pregnant
 tatooed
 celtics
 await
+pops
 blackstriped
 jib
 interlocking
@@ -7268,8 +7181,6 @@ joyful
 guessing
 treks
 text
-welllit
-meat
 desks
 buses
 headwraps
@@ -7277,6 +7188,7 @@ tugboat
 aggresively
 hook
 defender
+curls
 slouching
 lunchbox
 nordic
@@ -7302,6 +7214,7 @@ coloful
 redbrown
 holiday
 bathe
+fed
 windsailing
 fixing
 largeboned
@@ -7345,6 +7258,7 @@ cafeteria
 easy
 defying
 gravity
+battles
 negotiates
 extravagantlyhaired
 stifflyposed
@@ -7378,7 +7292,6 @@ regalia
 matador
 bullrider
 jumpy
-midway
 espana
 streaks
 spain
@@ -7418,6 +7331,7 @@ clapped
 merry
 triangle
 unner
+collision
 overturn
 beaver
 serena
@@ -7425,6 +7339,7 @@ williams
 milling
 skeptically
 ruined
+grasp
 once
 champ
 rafael
@@ -7462,7 +7377,6 @@ openair
 fairly
 icicles
 wrangle
-wrangles
 shorline
 coated
 wooly
@@ -7511,6 +7425,7 @@ fighters
 blackblue
 litle
 minirace
+tea
 tabloid
 slush
 skilift
@@ -7519,6 +7434,7 @@ looms
 telegraph
 skislope
 dupar
+climbed
 write
 fellows
 slates
@@ -7528,11 +7444,14 @@ ot
 domed
 protester
 proamerica
+protesting
 antitax
 dont
 tax
 me
 bro
+tumbles
+wrecked
 661
 wrecks
 carreis
@@ -7588,18 +7507,13 @@ dj
 djs
 entertain
 roped
-bullfighter
-skewers
-stabs
-bullfight
-sock
-struck
 bases
 coached
 needs
 acrobat
 entangles
 twisted
+ballplayer
 shortstop
 science
 armour
@@ -7617,11 +7531,11 @@ sprawling
 flyfishing
 railling
 poppies
-ethnicity
 refugees
 families
 un
 texting
+charging
 charged
 dandelion
 frames
@@ -7635,6 +7549,7 @@ hte
 peddles
 towing
 fronr
+closing
 armstand
 granite
 canadian
@@ -7651,9 +7566,6 @@ onslaught
 east
 cowlike
 ox
-trophy
-accepts
-winner
 atheletes
 lapse
 ropey
@@ -7687,7 +7599,6 @@ stiars
 intervening
 teeshirt
 againest
-stood
 shells
 cannon
 soar
@@ -7724,15 +7635,13 @@ recoils
 occasion
 lapel
 rung
-pitches
-lafayette
 bunchh
+mingle
 cuddling
 cower
 brownstone
 stoop
 sheilding
-ads
 our
 nestled
 snuggling
@@ -7750,10 +7659,9 @@ underneat
 flaring
 david
 beckham
+stood
 canvasses
 enforcment
-owl
-widespread
 jetskis
 manuals
 joggers
@@ -7790,8 +7698,6 @@ flowerbed
 bowing
 mainly
 grainy
-brian
-nugent
 angled
 childern
 fathers
@@ -7812,6 +7718,7 @@ pianist
 ceramic
 disgusted
 patriotic
+welllit
 poorlylit
 riverwater
 fiercely
@@ -7832,6 +7739,7 @@ stages
 worm
 addressing
 diverse
+pain
 winces
 comic
 superhero
@@ -7846,7 +7754,6 @@ hurdlejumper
 trackandfield
 pups
 momma
-hummingbird
 offf
 skimming
 witches
@@ -7874,11 +7781,6 @@ shabby
 wolflike
 wiffle
 glide
-vfw
-funeral
-fraternal
-organization
-graveyard
 trows
 zig
 zagging
@@ -7903,10 +7805,9 @@ suburbs
 passage
 mountainclimbing
 ascend
-highschoolers
-yound
 tho
 convoy
+hawk
 bellysmacker
 lightsaber
 ont
@@ -7923,7 +7824,6 @@ forms
 deeper
 flexibility
 enough
-most
 greyblue
 portfolio
 cases
@@ -7981,8 +7881,8 @@ sightseers
 scope
 hunt
 outfir
+pugs
 broom
-tame
 stopaction
 soaks
 interrupts
@@ -7996,11 +7896,6 @@ gardening
 soil
 hoes
 gover
-presenting
-certificate
-accepting
-announcer
-officiallooking
 perfume
 overtop
 perused
@@ -8015,6 +7910,7 @@ bring
 urge
 58
 shelton
+pitches
 exciting
 varied
 vegetable
@@ -8061,7 +7957,6 @@ edges
 tend
 rakes
 mutltiple
-soundproof
 motorcrossing
 157
 drips
@@ -8069,9 +7964,13 @@ rested
 brighty
 inlineskates
 fisheye
+flees
 agents
 accompanying
+trophy
+winner
 tophats
+most
 hoists
 retreiving
 ump
@@ -8103,13 +8002,8 @@ imagery
 crucifixion
 christ
 crucified
-coffin
-pall
-bearers
-casket
 panasonic
 encounters
-probably
 handheld
 backtoback
 highrise
@@ -8117,6 +8011,7 @@ outise
 sidewalks
 judges
 rates
+tipped
 panel
 impress
 serveral
@@ -8159,8 +8054,6 @@ corporate
 sprinkles
 sprinking
 kaki
-javelin
-vaulated
 treed
 midpitch
 profession
@@ -8191,6 +8084,7 @@ spinart
 earmuffs
 bland
 washing
+belts
 album
 hedge
 behinf
@@ -8228,6 +8122,7 @@ policewoman
 iceburg
 somersaults
 cartwheeling
+struck
 shin
 mermaid
 chemical
@@ -8279,6 +8174,7 @@ even
 raining
 unexcited
 plywood
+onlooker
 streght
 here
 girlfriends
@@ -8287,11 +8183,11 @@ antique
 ornament
 railgrind
 handrails
+mate
 aloft
 enterance
 literature
 litttle
-vinyl
 blackyellow
 snare
 swimmies
@@ -8394,9 +8290,6 @@ brawl
 dragons
 year
 adventures
-gyro
-butchers
-beef
 uplifted
 corgie
 patrick
@@ -8421,6 +8314,7 @@ dries
 howls
 springer
 springtime
+turtle
 crosslegged
 approachs
 barbeque
@@ -8438,6 +8332,7 @@ shares
 outs
 dolls
 strolling
+falcon
 hangong
 rods
 hoodoos
@@ -8543,6 +8438,7 @@ smashed
 facepainted
 reflected
 tightropes
+ambulance
 berets
 fedex
 trooper
@@ -8582,15 +8478,12 @@ shadowy
 leatherclad
 punkish
 nibbles
-vacation
-affixed
-dilapidated
-shuttered
 finds
 sloppy
 swallow
 hoof
 bronze
+stomachs
 marinelifethemed
 troll
 forth
@@ -8599,6 +8492,7 @@ aveda
 established
 slipping
 chewedup
+muffs
 headline
 bandanas
 cloths
@@ -8622,6 +8516,7 @@ hippie
 organized
 messanger
 caged
+strawberry
 flashes
 maneuvering
 hoddie
@@ -8648,10 +8543,6 @@ midday
 sillouhette
 daschunds
 wishing
-civil
-reenactment
-cannons
-reenactors
 backgound
 capri
 entertainer
@@ -8693,6 +8584,7 @@ shiner
 customers
 cuddle
 encouraged
+waitress
 collapsable
 emerald
 dunked

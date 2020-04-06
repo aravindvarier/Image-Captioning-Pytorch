@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import warnings
 
 class Encoder(nn.Module):
     """
@@ -356,9 +357,9 @@ class TransformerDecoder(nn.Module):
 
         self.dropout = nn.Dropout(p=dropout)
 
-        self.layernorm1 = nn.LayerNorm([self.hidden_size])
-        self.layernorm2 = nn.LayerNorm([self.hidden_size])
-        self.layernorm3 = nn.LayerNorm([self.hidden_size])
+        self.layernorms1 = nn.ModuleList([nn.LayerNorm([self.hidden_size]) for i in range(self.num_layers)])
+        self.layernorms2 = nn.ModuleList([nn.LayerNorm([self.hidden_size]) for i in range(self.num_layers)])
+        self.layernorms3 = nn.ModuleList([nn.LayerNorm([self.hidden_size]) for i in range(self.num_layers)])
 
     def forward(self, inputs, annotations):
         """Forward pass of the attention-based decoder RNN.
@@ -397,7 +398,7 @@ class TransformerDecoder(nn.Module):
 
             new_contexts = self.linear_after_causal(concat_causal) #batch_size x seq_len x hidden_size*num_heads -----> batch_size x seq_len x hidden_size
             new_contexts = self.dropout(new_contexts) #dropout
-            residual_contexts = self.layernorm1(contexts + new_contexts) #add and norm
+            residual_contexts = self.layernorms1[i](contexts + new_contexts) #add and norm
 
             for j in range(self.num_heads):
                 new_contexts, encoder_attention_weights = self.encoder_attentions[i][j](residual_contexts, annotations, annotations) # batch_size x seq_len x hidden_size
@@ -405,11 +406,11 @@ class TransformerDecoder(nn.Module):
             
             new_contexts = self.linear_after_scaled(concat_scaled) #batch_size x seq_len x hidden_size*num_heads -----> batch_size x seq_len x hidden_size
             new_contexts = self.dropout(new_contexts) #dropout
-            residual_contexts = self.layernorm2(residual_contexts + new_contexts) #add and norm
+            residual_contexts = self.layernorms2[i](residual_contexts + new_contexts) #add and norm
 
             new_contexts = self.attention_mlps[i](residual_contexts)
             new_contexts = self.dropout(new_contexts) #dropout
-            contexts = self.layernorm3(residual_contexts + new_contexts) #add and norm
+            contexts = self.layernorms3[i](residual_contexts + new_contexts) #add and norm
           # ------------
           # FILL THIS IN - END
           # ------------
