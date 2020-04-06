@@ -33,6 +33,7 @@ class TestDataset(Dataset):
         self.vocab = None
         self.vocab_size = None
         self.images = self.captions = []
+        self.all_captions = {}
         self.preprocess_files(self.split_dir, self.ann_dir, vocab_file)
         
         if(transform == None):
@@ -45,7 +46,7 @@ class TestDataset(Dataset):
         
     
     def preprocess_files(self, split_dir, ann_dir, vocab_file):
-        all_captions = {}
+        # all_captions = {}
         
         with open(split_dir, "r") as split_f:
             sub_lines = split_f.readlines()
@@ -55,13 +56,13 @@ class TestDataset(Dataset):
                 if line.split("#")[0] + "\n" in sub_lines:
                     image_file = line.split('#')[0]
                     caption = utils.clean_description(line.split()[1:])
-                    if image_file in all_captions:
-                        all_captions[image_file].append(caption)
+                    if image_file in self.all_captions:
+                        self.all_captions[image_file].append(caption)
                     else:
-                        all_captions[image_file] = [caption]
+                        self.all_captions[image_file] = [caption]
 
-        self.images = list(all_captions.keys())
-        self.captions = list(all_captions.values())
+        self.images = list(self.all_captions.keys())
+        self.captions = list(self.all_captions.values())
         assert(len(self.images) == len(self.captions))
         assert(len(self.captions[-1]) == 5)
         vocab = []
@@ -96,39 +97,31 @@ def collater(batch):
 
     return images, all_caps
 
-def get_output_sentence(model, device, file_path, vocab):
-    image = Image.open(file_path)
-    transform = transforms.Compose([
-        transforms.Resize((224,224)),
-#                 transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    image = transform(image)
+def get_output_sentence(model, device, images, vocab):
 
-    hypotheses = []
+
+    # hypotheses = []
     
     with torch.no_grad():
         torch.cuda.empty_cache()
 
-        image = image.unsqueeze(0)
-        image = image.to(device)
+        images = images.to(device)
+        target_eos = len(vocab) + 1
+        target_sos = 0
 
-        b_1 = model(image, on_max='halt')
+        b_1 = model(images, on_max='halt')
         captions_cand = b_1[..., 0]
 
         cands = captions_cand.T
         cands_list = cands.tolist()
         for i in range(len(cands_list)): #Removes sos tags
-            cands_list[i] = list(filter((0).__ne__, cands_list[i]))
-            cands_list[i] = list(filter((len(vocab)+1).__ne__, cands_list[i]))
+            cands_list[i] = list(filter((target_sos).__ne__, cands_list[i]))
+            cands_list[i] = list(filter((target_eos).__ne__, cands_list[i]))
 
-        hypotheses += cands_list
+    #     hypotheses += cands_list
 
-    for i in range(len(hypotheses)):
-        hypotheses[i] = [vocab[j - 1] for j in hypotheses[i]]
-
-    return " ".join(hypotheses[0])
+    
+    return cands_list
 
 def print_metrics(model, device, dataset, dataloader):
     references = []
@@ -139,21 +132,8 @@ def print_metrics(model, device, dataset, dataloader):
             torch.cuda.empty_cache()
             images, captions = data
 
-            images = images.to(device)
-            target_eos = dataset.EOS
-            target_sos = dataset.SOS
-
-            b_1 = model(images, on_max='halt')
-            captions_cand = b_1[..., 0]
-
-            cands = captions_cand.T
-            cands_list = cands.tolist()
-            for i in range(len(cands_list)): #Removes sos tags
-                cands_list[i] = list(filter((target_sos).__ne__, cands_list[i]))
-                cands_list[i] = list(filter((target_eos).__ne__, cands_list[i]))
-
             references += captions
-            hypotheses += cands_list
+            hypotheses += get_output_sentence(model, device, images, dataset.vocab)
 
         for i in range(len(references)):
             hypotheses[i] = [dataset.vocab[j - 1] for j in hypotheses[i]]

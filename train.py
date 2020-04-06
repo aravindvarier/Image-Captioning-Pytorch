@@ -161,7 +161,22 @@ def predict(model, device, image_name):
         for line in vocab_f:
             vocab.append(line.strip())
     image_path = os.path.join(img_dir, image_name)
-    print(eval.get_output_sentence(model, device, image_path, vocab))
+    image = Image.open(image_path)
+    transform = transforms.Compose([
+        transforms.Resize((224,224)),
+#                 transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    image = transform(image)
+    image = image.unsqueeze(0)
+    hypotheses = eval.get_output_sentence(model, device, image, vocab)
+
+    for i in range(len(hypotheses)):
+        hypotheses[i] = [vocab[token - 1] for token in hypotheses[i]]
+        hypotheses[i] = " ".join(hypotheses[i])
+
+    print(hypotheses) 
 
 
 def clip_gradient(optimizer, grad_clip):
@@ -232,7 +247,7 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
 decoder_type = 'rnn' #transformer, rnn
 warmup_steps = 4000
 
-CNN_channels = 512 #DO SOMETHING ABOUT THIS, 2048 for resnet101
+CNN_channels = 1024 #DO SOMETHING ABOUT THIS, 2048 for resnet101
 max_epochs = 100
 beam_width = 4
 
@@ -242,7 +257,7 @@ model_save_path = './model_saves/'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 lamda = 1.
 if decoder_type == 'rnn':
-    learning_rate = 0.01
+    learning_rate = 0.005
     decoder_hidden_size = 1800
     dropout = 0.5
 else:    
@@ -255,7 +270,8 @@ grad_clip = 5.
 transformer_layers = 6
 heads = 3
 
-    
+use_checkpoint = False
+checkpoint_path = 'epoch50.pt'
 
 if not os.path.isdir(model_save_path):
     os.mkdir(model_save_path)
@@ -281,13 +297,24 @@ model = EncoderDecoder(encoder_class, decoder_class, train_data.vocab_size, targ
                        word_embedding_size=word_embedding_size, attention_dim=attention_dim, decoder_type=decoder_type, cell_type='lstm', beam_width=beam_width, dropout=dropout,
                        transformer_layers=transformer_layers, num_heads=heads)
 
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.98))
+# optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.98))
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
+fixed_image = "2090545563_a4e66ec76b.jpg"
 
 if mode == "train":
     n_iter = 1
     best_bleu = 0.
     epoch = 1
+
+    if use_checkpoint:
+        checkpoint = torch.load(model_save_path + checkpoint_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        epoch = checkpoint['epoch']
+        loss = checkpoint['loss']
+        print("Loss of checkpoint model: ", loss)
+    print("Ground Truth captions: ", [" ".join(caption) for caption in val_data.all_captions[fixed_image]])
     while epoch <= max_epochs:
         model.to(device)
         model.train()
@@ -301,7 +328,7 @@ if mode == "train":
         # )
         print(f'Epoch {epoch}: loss={loss}')
         eval.print_metrics(model, device, val_data, val_dataloader)
-
+        print("Predicted caption: ",predict(model, device, fixed_image))
     #     print(f'Epoch {epoch}: loss={loss}')
     #         if bleu_score < best_bleu:
     #             num_poor += 1
@@ -311,18 +338,23 @@ if mode == "train":
         if epoch % 10 == 0:
             model.cpu()
             print('Saving Model on Epoch', epoch)
-            torch.save(model.state_dict(), model_save_path + f'epoch{epoch}.pt')
+            torch.save({
+                        "model_state_dict": model.state_dict(),
+                        "optimizer_state_dict": optimizer.state_dict(),
+                        "epoch": epoch,
+                        "loss": loss
+                        }, model_save_path + f'epoch{epoch}.pt')
             
         epoch += 1
         if epoch > max_epochs:
             print(f'Finished {max_epochs} epochs')
         torch.cuda.empty_cache()
 elif mode == "test":
-    model.load_state_dict(torch.load(model_save_path + '50.pt'))
+    model.load_state_dict(torch.load(model_save_path + 'epoch50.pt'))
     model.to(device)
     model.eval()
 
-    predict(model, device, "10815824_2997e03d76.jpg")
+    predict(model, device, fixed_image)
     # eval.print_metrics(model, device, test_data, test_dataloader)
     
 
