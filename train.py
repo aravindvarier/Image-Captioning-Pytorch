@@ -27,8 +27,6 @@ vocab_file = './vocab.txt'
 SEED = 123
 torch.manual_seed(SEED)
 
-mode = 'train'
-
 class Flickr8kDataset(Dataset):
     """Flickr8k dataset."""
     
@@ -271,7 +269,8 @@ transformer_layers = 6
 heads = 3
 
 use_checkpoint = False
-checkpoint_path = 'epoch50.pt'
+checkpoint_path = 'epoch7.pt'
+mode = 'train'
 
 if not os.path.isdir(model_save_path):
     os.mkdir(model_save_path)
@@ -327,11 +326,12 @@ if mode == "train":
         # EVALUATE AND ADJUST LR ACCORDINGLY
         model.eval()
         print(f'Epoch {epoch}: loss={loss}')
-        metrics = eval.print_metrics(model, device, val_data, val_dataloader)
-        is_epoch_better = metrics['bleu_4'] > best_bleu4
+        metrics = eval.get_pycoco_metrics(model, device, val_data, val_dataloader)
+        print(metrics)
+        is_epoch_better = metrics['Bleu_4'] > best_bleu4
         if is_epoch_better:
             poor_iters = 0
-            best_bleu4 = metrics['bleu_4']
+            best_bleu4 = metrics['Bleu_4']
         else:
             poor_iters += 1
         if poor_iters > 0 and poor_iters % num_iters_change_lr == 0:
@@ -358,12 +358,11 @@ if mode == "train":
             print(f'Finished {max_epochs} epochs')
         torch.cuda.empty_cache()
 elif mode == "test":
-    model.load_state_dict(torch.load(model_save_path + 'epoch50.pt'))
+    checkpoint = torch.load(model_save_path + checkpoint_path)
+    model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
     model.eval()
-
-    predict(model, device, fixed_image)
-    # eval.print_metrics(model, device, test_data, test_dataloader)
+    # predict(model, device, fixed_image)
+    print(eval.get_pycoco_metrics(model, device, val_data, val_dataloader))
     
-
 

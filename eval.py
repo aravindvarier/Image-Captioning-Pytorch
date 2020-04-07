@@ -11,6 +11,12 @@ import nltk
 nltk.download('wordnet')
 import utils
 
+from pycocoevalcap.bleu.bleu import Bleu
+from pycocoevalcap.rouge.rouge import Rouge
+from pycocoevalcap.cider.cider import Cider
+from pycocoevalcap.meteor.meteor import Meteor
+
+
 
 class TestDataset(Dataset):
     """Flickr8k dataset."""
@@ -98,10 +104,7 @@ def collater(batch):
     return images, all_caps
 
 def get_output_sentence(model, device, images, vocab):
-
-
     # hypotheses = []
-    
     with torch.no_grad():
         torch.cuda.empty_cache()
 
@@ -119,11 +122,33 @@ def get_output_sentence(model, device, images, vocab):
             cands_list[i] = list(filter((target_eos).__ne__, cands_list[i]))
 
     #     hypotheses += cands_list
-
     
     return cands_list
 
-def print_metrics(model, device, dataset, dataloader):
+
+def score(ref, hypo):
+    """
+    ref, dictionary of reference sentences (id, sentence)
+    hypo, dictionary of hypothesis sentences (id, sentence)
+    score, dictionary of scores
+    """
+    scorers = [
+        (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
+        (Meteor(),"METEOR"),
+        (Rouge(), "ROUGE_L"),
+        (Cider(), "CIDEr")
+    ]
+    final_scores = {}
+    for scorer, method in scorers:
+        score, scores = scorer.compute_score(ref, hypo)
+        if type(score) == list:
+            for m, s in zip(method, score):
+                final_scores[m] = s
+        else:
+            final_scores[method] = score
+    return final_scores
+
+def get_references_and_hypotheses(model, device, dataset, dataloader):
     references = []
     hypotheses = []
     assert(len(dataset.captions) == len(dataset.images))
@@ -136,39 +161,55 @@ def print_metrics(model, device, dataset, dataloader):
             hypotheses += get_output_sentence(model, device, images, dataset.vocab)
 
         for i in range(len(references)):
-            hypotheses[i] = [dataset.vocab[j - 1] for j in hypotheses[i]]
+            hypotheses[i] = " ".join([dataset.vocab[j - 1] for j in hypotheses[i]])
 
         assert(len(references) == len(hypotheses))
+
+        return references, hypotheses
+
+def get_pycoco_metrics(model, device, dataset, dataloader):
+    references, hypotheses = get_references_and_hypotheses(model, device, dataset, dataloader)
+
+    hypo = {idx: ["".join(h)] for idx, h in enumerate(hypotheses)}
+    ref = {idx: [" ".join(l) for l in r] for idx, r in enumerate(references)}
+
+    metrics = score(ref, hypo)
+
+    return metrics
+
+
+def print_metrics(model, device, dataset, dataloader):
+    references, hypotheses = get_references_and_hypotheses(model, device, dataset, dataloader)
         
-        # bleu scores
-        bleu_1 = corpus_bleu(references, hypotheses, weights=(1, 0, 0, 0))
-        bleu_2 = corpus_bleu(references, hypotheses, weights=(0.5, 0.5, 0, 0))
-        bleu_3 = corpus_bleu(references, hypotheses, weights=(0.33, 0.33, 0.33, 0))
-        bleu_4 = corpus_bleu(references, hypotheses)
+    # bleu scores
+    bleu_1 = corpus_bleu(references, hypotheses, weights=(1, 0, 0, 0))
+    bleu_2 = corpus_bleu(references, hypotheses, weights=(0.5, 0.5, 0, 0))
+    bleu_3 = corpus_bleu(references, hypotheses, weights=(0.33, 0.33, 0.33, 0))
+    bleu_4 = corpus_bleu(references, hypotheses)
 
-        print('BLEU-1 ({})\t'
-                  'BLEU-2 ({})\t'
-                  'BLEU-3 ({})\t'
-                  'BLEU-4 ({})\t'.format(bleu_1, bleu_2, bleu_3, bleu_4))
+    print('BLEU-1 ({})\t'
+              'BLEU-2 ({})\t'
+              'BLEU-3 ({})\t'
+              'BLEU-4 ({})\t'.format(bleu_1, bleu_2, bleu_3, bleu_4))
 
-        # meteor score
-        total_m_score = 0.0
-        
-        for i in range(len(references)):
-            actual = [" ".join(ref) for ref in references[i]]
-            total_m_score += meteor_score(actual, " ".join(hypotheses[i]))
-        
-        m_score = total_m_score/len(references)
+    # meteor score
+    total_m_score = 0.0
+    
+    for i in range(len(references)):
+        actual = [" ".join(ref) for ref in references[i]]
+        total_m_score += meteor_score(actual, " ".join(hypotheses[i]))
+    
+    m_score = total_m_score/len(references)
 
-        print('Meteor Score: {}'.format(m_score))
+    print('Meteor Score: {}'.format(m_score))
 
-        metrics = {
-            'bleu_1': bleu_1,
-            'bleu_2': bleu_2,
-            'bleu_3': bleu_3,
-            'bleu_4': bleu_4,
-            'meteor': m_score
-        }
+    metrics = {
+        'bleu_1': bleu_1,
+        'bleu_2': bleu_2,
+        'bleu_3': bleu_3,
+        'bleu_4': bleu_4,
+        'meteor': m_score
+    }
 
-        return metrics
+    return metrics
 
