@@ -247,8 +247,8 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
 decoder_type = 'rnn' #transformer, rnn
 warmup_steps = 4000
 
-CNN_channels = 1024 #DO SOMETHING ABOUT THIS, 2048 for resnet101
-max_epochs = 100
+CNN_channels = 2048 #DO SOMETHING ABOUT THIS, 2048 for resnet101
+max_epochs = 20
 beam_width = 4
 
 word_embedding_size = 512
@@ -257,7 +257,7 @@ model_save_path = './model_saves/'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 lamda = 1.
 if decoder_type == 'rnn':
-    learning_rate = 0.005
+    learning_rate = 0.0001
     decoder_hidden_size = 1800
     dropout = 0.5
 else:    
@@ -265,7 +265,7 @@ else:
     decoder_hidden_size = CNN_channels
     dropout = 0.1
 
-batch_size = 64
+batch_size = 80
 grad_clip = 5.
 transformer_layers = 6
 heads = 3
@@ -304,8 +304,11 @@ fixed_image = "2090545563_a4e66ec76b.jpg"
 
 if mode == "train":
     n_iter = 1
-    best_bleu = 0.
+    best_bleu4 = 0.
+    poor_iters = 0
     epoch = 1
+    num_iters_change_lr = 2
+    max_poor_iters = 10
 
     if use_checkpoint:
         checkpoint = torch.load(model_save_path + checkpoint_path)
@@ -319,23 +322,28 @@ if mode == "train":
         model.to(device)
         model.train()
         loss, n_iter = train_for_epoch(model, train_dataloader, optimizer, device, n_iter)
+        
+
+        # EVALUATE AND ADJUST LR ACCORDINGLY
         model.eval()
-        # bleu_score = bleu.compute_average_bleu_over_dataset(
-        #     model, val_dataloader,
-        #     val_data.SOS,
-        #     val_data.EOS,
-        #     device,
-        # )
         print(f'Epoch {epoch}: loss={loss}')
-        eval.print_metrics(model, device, val_data, val_dataloader)
+        metrics = eval.print_metrics(model, device, val_data, val_dataloader)
+        is_epoch_better = metrics['bleu_4'] > best_bleu4
+        if is_epoch_better:
+            poor_iters = 0
+            best_bleu4 = metrics['bleu_4']
+        else:
+            poor_iters += 1
+        if poor_iters > 0 and poor_iters % num_iters_change_lr == 0:
+            print("Adjusting learning rate on epoch ", epoch)
+            utils.adjust_learning_rate(optimizer, 0.6)
+        if poor_iters > max_poor_iters:
+            print("Hasn't improved for 10 epochs...I give up :(")
+            break
         print("Predicted caption: ",predict(model, device, fixed_image))
-    #     print(f'Epoch {epoch}: loss={loss}')
-    #         if bleu_score < best_bleu:
-    #             num_poor += 1
-    #         else:
-    #             num_poor = 0
-    #             best_bleu = bleu_score
-        if epoch % 10 == 0:
+        
+        # SAVE MODEL EVERY 10 EPOCHS
+        if epoch > 4 and is_epoch_better:
             model.cpu()
             print('Saving Model on Epoch', epoch)
             torch.save({

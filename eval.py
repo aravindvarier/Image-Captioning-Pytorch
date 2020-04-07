@@ -158,5 +158,17 @@ def print_metrics(model, device, dataset, dataloader):
             actual = [" ".join(ref) for ref in references[i]]
             total_m_score += meteor_score(actual, " ".join(hypotheses[i]))
         
-        print('Meteor Score: {}'.format(total_m_score/len(references)))
+        m_score = total_m_score/len(references)
+
+        print('Meteor Score: {}'.format(m_score))
+
+        metrics = {
+            'bleu_1': bleu_1,
+            'bleu_2': bleu_2,
+            'bleu_3': bleu_3,
+            'bleu_4': bleu_4,
+            'meteor': m_score
+        }
+
+        return metrics
 

@@ -27,7 +27,7 @@ class Encoder(nn.Module):
         resnet = models.resnet101(pretrained=True)  # pretrained ImageNet ResNet-101
 
         # Remove linear and pool layers (since we're not doing classification)
-        modules = list(resnet.children())[:-3]
+        modules = list(resnet.children())[:-2]
         self.resnet = nn.Sequential(*modules)
 
         # Resize image to fixed size to allow input images of variable size
@@ -149,6 +149,7 @@ class Decoder(nn.Module):
         self.embedding = self.cell = None
         self.ff_out = self.attention_net = self.ff_init_h = self.ff_init_c = None
         self.init_submodules()
+        self.init_weights()
 
     def init_submodules(self):
         '''Initialize the parameterized submodules of this network
@@ -172,6 +173,14 @@ class Decoder(nn.Module):
 
         self.output_linear_1 = nn.Linear(self.decoder_hidden_state_size, self.word_embedding_size)
         self.output_linear_2 = nn.Linear(self.encoder_hidden_state_size, self.word_embedding_size)
+
+    def init_weights(self):
+        """
+        Initializes some parameters with values from the uniform distribution, for easier convergence.
+        """
+        self.embedding.weight.data.uniform_(-0.1, 0.1)
+        self.ff_out.bias.data.fill_(0)
+        self.ff_out.weight.data.uniform_(-0.1, 0.1)
 
     def forward(self, E_tm1, y_tm1, htilde_tm1, h):
         '''
