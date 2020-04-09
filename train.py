@@ -13,6 +13,7 @@ import eval
 import bleu
 import utils
 import string
+import copy
 
 from models import *
 
@@ -246,7 +247,7 @@ decoder_type = 'rnn' #transformer, rnn
 warmup_steps = 4000
 
 CNN_channels = 2048 #DO SOMETHING ABOUT THIS, 2048 for resnet101
-max_epochs = 20
+max_epochs = 100
 beam_width = 4
 
 word_embedding_size = 512
@@ -256,21 +257,21 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 lamda = 1.
 if decoder_type == 'rnn':
     learning_rate = 0.0001
-    decoder_hidden_size = 1800
+    decoder_hidden_size = 512
     dropout = 0.5
 else:    
     learning_rate = (word_embedding_size**(-0.5)) * min(n_iter**(-0.5), n_iter*(warmup_steps**(-1.5)))
     decoder_hidden_size = CNN_channels
     dropout = 0.1
 
-batch_size = 80
+batch_size = 64
 grad_clip = 5.
 transformer_layers = 6
 heads = 3
 
 use_checkpoint = False
-checkpoint_path = 'epoch7.pt'
-mode = 'train'
+checkpoint_path = 'best_model17.pt'
+mode = 'test'
 
 if not os.path.isdir(model_save_path):
     os.mkdir(model_save_path)
@@ -306,13 +307,18 @@ if mode == "train":
     best_bleu4 = 0.
     poor_iters = 0
     epoch = 1
-    num_iters_change_lr = 2
+    num_iters_change_lr = 4
     max_poor_iters = 10
+    best_model = None
+    best_optimizer = None
+    best_loss = None
+    best_epoch = None
 
     if use_checkpoint:
         checkpoint = torch.load(model_save_path + checkpoint_path)
         model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         epoch = checkpoint['epoch']
         loss = checkpoint['loss']
         print("Loss of checkpoint model: ", loss)
@@ -332,29 +338,50 @@ if mode == "train":
         if is_epoch_better:
             poor_iters = 0
             best_bleu4 = metrics['Bleu_4']
+            best_model = copy.deepcopy(model)
+            best_epoch = epoch
+            best_optimizer = optimizer
+            best_loss = loss
         else:
             poor_iters += 1
-        if poor_iters > 0 and poor_iters % num_iters_change_lr == 0:
-            print("Adjusting learning rate on epoch ", epoch)
-            utils.adjust_learning_rate(optimizer, 0.6)
+        # if poor_iters > 0 and poor_iters % num_iters_change_lr == 0:
+        #     print("Adjusting learning rate on epoch ", epoch)
+        #     utils.adjust_learning_rate(optimizer, 0.6)
         if poor_iters > max_poor_iters:
-            print("Hasn't improved for 10 epochs...I give up :(")
+            print("Hasn't improved for 100 epochs...I give up :(")
+            print(f"Saving Best Model with Bleu_4 score of {best_bleu4}")
+            torch.save({
+                        "model_state_dict": best_model.state_dict(),
+                        "optimizer_state_dict": best_optimizer.state_dict(),
+                        "epoch": best_epoch,
+                        "loss": best_loss,
+                        "best_bleu4": best_bleu4
+                        }, model_save_path + f'autobestmodel.pt')
             break
         print("Predicted caption: ",predict(model, device, fixed_image))
         
         # SAVE MODEL EVERY 10 EPOCHS
-        if epoch > 4 and is_epoch_better:
+        if epoch % 10 == 0:
             model.cpu()
-            print('Saving Model on Epoch', epoch)
+            print(f"Saving Best Model with Bleu_4 score of {best_bleu4}")
             torch.save({
-                        "model_state_dict": model.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "epoch": epoch,
-                        "loss": loss
-                        }, model_save_path + f'epoch{epoch}.pt')
+                        "model_state_dict": best_model.state_dict(),
+                        "optimizer_state_dict": best_optimizer.state_dict(),
+                        "epoch": best_epoch,
+                        "loss": best_loss,
+                        "best_bleu4": best_bleu4
+                        }, model_save_path + f'autobestmodel.pt')
             
         epoch += 1
         if epoch > max_epochs:
+            print(f"Saving Best Model with Bleu_4 score of {best_bleu4}")
+            torch.save({
+                        "model_state_dict": best_model.state_dict(),
+                        "optimizer_state_dict": best_optimizer.state_dict(),
+                        "epoch": best_epoch,
+                        "loss": best_loss,
+                        "best_bleu4": best_bleu4
+                        }, model_save_path + f'autobestmodel.pt')
             print(f'Finished {max_epochs} epochs')
         torch.cuda.empty_cache()
 elif mode == "test":
@@ -363,6 +390,7 @@ elif mode == "test":
     model.to(device)
     model.eval()
     # predict(model, device, fixed_image)
-    print(eval.get_pycoco_metrics(model, device, val_data, val_dataloader))
+    print(eval.get_pycoco_metrics(model, device, test_data, test_dataloader))
     
+
 

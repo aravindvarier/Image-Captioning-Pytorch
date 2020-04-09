@@ -47,7 +47,7 @@ class Encoder(nn.Module):
         out = out.permute(2, 0, 1)  # (encoded_image_size * encoded_image_size, batch_size, 2048)
         return out
 
-    def fine_tune(self, fine_tune=False):
+    def fine_tune(self, fine_tune=True):
         """
         Allow or prevent the computation of gradients for convolutional blocks 2 through 4 of the encoder.
         :param fine_tune: Allow?
@@ -75,7 +75,9 @@ class AdditiveAttention(nn.Module):
         self.softmax = nn.Softmax(dim=0)
 
         self.decoder_att_net = nn.Linear(decoder_hidden_size, attention_dim)
+        # nn.init.xavier_uniform_(self.decoder_att_net.weight)
         self.encoder_att_net = nn.Linear(encoder_hidden_size, attention_dim)
+        # nn.init.xavier_uniform_(self.encoder_att_net.weight)
         self.full_att_net = nn.Sequential(nn.Linear(attention_dim, 1),
                                             nn.ReLU())
 
@@ -155,6 +157,7 @@ class Decoder(nn.Module):
         '''Initialize the parameterized submodules of this network
         '''
         self.embedding = nn.Embedding(self.target_vocab_size, self.word_embedding_size, self.pad_id)
+        nn.init.xavier_uniform_(self.embedding.weight)
         if self.cell_type == 'rnn':
             self.cell = nn.RNNCell(input_size=self.word_embedding_size + self.encoder_hidden_state_size, hidden_size=self.decoder_hidden_state_size)
         elif self.cell_type == 'gru':
@@ -163,6 +166,7 @@ class Decoder(nn.Module):
             self.cell = nn.LSTMCell(input_size=self.word_embedding_size + self.encoder_hidden_state_size, hidden_size=self.decoder_hidden_state_size)
         
         self.ff_out = nn.Linear(self.word_embedding_size , self.target_vocab_size)
+        nn.init.xavier_uniform_(self.ff_out.weight)
         
         self.ff_init_h = MLP_init(encoder_hidden_size=self.encoder_hidden_state_size, decoder_hidden_size=self.decoder_hidden_state_size)
         self.ff_init_c = MLP_init(encoder_hidden_size=self.encoder_hidden_state_size, decoder_hidden_size=self.decoder_hidden_state_size)
@@ -172,15 +176,19 @@ class Decoder(nn.Module):
         self.dropout = nn.Dropout(p=self.dropout)
 
         self.output_linear_1 = nn.Linear(self.decoder_hidden_state_size, self.word_embedding_size)
+        nn.init.xavier_uniform_(self.output_linear_1.weight)
         self.output_linear_2 = nn.Linear(self.encoder_hidden_state_size, self.word_embedding_size)
+        nn.init.xavier_uniform_(self.output_linear_2.weight)
 
     def init_weights(self):
         """
         Initializes some parameters with values from the uniform distribution, for easier convergence.
         """
-        self.embedding.weight.data.uniform_(-0.1, 0.1)
+        # self.embedding.weight.data.uniform_(-0.1, 0.1)
         self.ff_out.bias.data.fill_(0)
-        self.ff_out.weight.data.uniform_(-0.1, 0.1)
+        # self.ff_out.weight.data.uniform_(-0.1, 0.1)
+        # self.output_linear_1.weight.data.uniform_(-0.1, 0.1)
+        # self.output_linear_2.weight.data.uniform_(-0.1, 0.1)
 
     def forward(self, E_tm1, y_tm1, htilde_tm1, h):
         '''
