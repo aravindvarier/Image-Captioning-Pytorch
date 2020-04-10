@@ -246,7 +246,7 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
 decoder_type = 'rnn' #transformer, rnn
 warmup_steps = 4000
 
-CNN_channels = 2048 #DO SOMETHING ABOUT THIS, 2048 for resnet101
+CNN_channels = 512 #DO SOMETHING ABOUT THIS, 2048 for resnet101
 max_epochs = 100
 beam_width = 4
 
@@ -271,7 +271,7 @@ heads = 3
 
 use_checkpoint = False
 checkpoint_path = 'best_model17.pt'
-mode = 'test'
+mode = 'train'
 
 if not os.path.isdir(model_save_path):
     os.mkdir(model_save_path)
@@ -386,11 +386,12 @@ if mode == "train":
         torch.cuda.empty_cache()
 elif mode == "test":
     checkpoint = torch.load(model_save_path + checkpoint_path)
+    # print("This model has bleu4 of: ", checkpoint['best_bleu4'])
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
     model.eval()
     # predict(model, device, fixed_image)
-    print(eval.get_pycoco_metrics(model, device, test_data, test_dataloader))
+    print(eval.get_pycoco_metrics(model, device, val_data, val_dataloader))
     
 
 
