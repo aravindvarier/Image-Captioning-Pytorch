@@ -350,8 +350,8 @@ class TransformerDecoder(nn.Module):
                                     nn.ReLU(),
                                  ) for i in range(self.num_layers)])
 
-        self.linear_after_causal = nn.Linear(self.num_heads*hidden_size, hidden_size)
-        self.linear_after_scaled = nn.Linear(self.num_heads*hidden_size, hidden_size)
+        self.linear_after_causal = nn.ModuleList([nn.Linear(self.num_heads*hidden_size, hidden_size) for j in range(self.num_layers)])
+        self.linear_after_scaled = nn.ModuleList([nn.Linear(self.num_heads*hidden_size, hidden_size) for j in range(self.num_layers)])
 
         self.out = nn.Linear(hidden_size, vocab_size)
 
@@ -398,7 +398,7 @@ class TransformerDecoder(nn.Module):
                 new_contexts, self_attention_weights = self.self_attentions[i][j](contexts, contexts, contexts)  # batch_size x seq_len x hidden_size
                 concat_causal = torch.cat((concat_causal, new_contexts), axis=2)
 
-            new_contexts = self.linear_after_causal(concat_causal) #batch_size x seq_len x hidden_size*num_heads -----> batch_size x seq_len x hidden_size
+            new_contexts = self.linear_after_causal[i](concat_causal) #batch_size x seq_len x hidden_size*num_heads -----> batch_size x seq_len x hidden_size
             new_contexts = self.dropout(new_contexts) #dropout
             residual_contexts = self.layernorms1[i](contexts + new_contexts) #add and norm
 
@@ -406,7 +406,7 @@ class TransformerDecoder(nn.Module):
                 new_contexts, encoder_attention_weights = self.encoder_attentions[i][j](residual_contexts, annotations, annotations) # batch_size x seq_len x hidden_size
                 concat_scaled = torch.cat((concat_scaled, new_contexts), axis=2)
             
-            new_contexts = self.linear_after_scaled(concat_scaled) #batch_size x seq_len x hidden_size*num_heads -----> batch_size x seq_len x hidden_size
+            new_contexts = self.linear_after_scaled[i](concat_scaled) #batch_size x seq_len x hidden_size*num_heads -----> batch_size x seq_len x hidden_size
             new_contexts = self.dropout(new_contexts) #dropout
             residual_contexts = self.layernorms2[i](residual_contexts + new_contexts) #add and norm
 

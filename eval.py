@@ -61,7 +61,7 @@ class TestDataset(Dataset):
             for line in ann_f:
                 if line.split("#")[0] + "\n" in sub_lines:
                     image_file = line.split('#')[0]
-                    caption = utils.clean_description(line.split()[1:])
+                    caption = utils.clean_description(line.replace("-", " ").split()[1:])
                     if image_file in self.all_captions:
                         self.all_captions[image_file].append(caption)
                     else:
@@ -169,8 +169,8 @@ def get_references_and_hypotheses(model, device, dataset, dataloader):
 
 def get_pycoco_metrics(model, device, dataset, dataloader):
     references, hypotheses = get_references_and_hypotheses(model, device, dataset, dataloader)
-
-    hypo = {idx: ["".join(h)] for idx, h in enumerate(hypotheses)}
+    
+    hypo = {idx: [h] for idx, h in enumerate(hypotheses)}
     ref = {idx: [" ".join(l) for l in r] for idx, r in enumerate(references)}
 
     metrics = score(ref, hypo)

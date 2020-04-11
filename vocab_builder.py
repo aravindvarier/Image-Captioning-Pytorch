@@ -15,7 +15,7 @@ with open(ann_file, "r") as ann_f:
     for line in ann_f:
         img = line.split('#')[0] + "\n"
         if (img in train_lines) or (img in val_lines) or (img in test_lines):
-            caption = utils.clean_description(line.split()[1:])
+            caption = utils.clean_description(line.replace("-", " ").split()[1:])
             captions.append(caption)
 
 vocab = []

@@ -70,7 +70,7 @@ class Flickr8kDataset(Dataset):
         with open(ann_dir, "r") as ann_f:
             for line in ann_f:
                 if line.split("#")[0] + "\n" in sub_lines:
-                    caption = utils.clean_description(line.split()[1:])
+                    caption = utils.clean_description(line.replace("-", " ").split()[1:])
                     image_file_names.append(line.split()[0])
                     captions.append(caption)
 
@@ -176,7 +176,7 @@ def predict(model, device, image_name):
         hypotheses[i] = [vocab[token - 1] for token in hypotheses[i]]
         hypotheses[i] = " ".join(hypotheses[i])
 
-    print(hypotheses) 
+    return hypotheses
 
 
 def clip_gradient(optimizer, grad_clip):
@@ -254,12 +254,17 @@ parser.add_argument('--beam-width', type=int, default=4)
 parser.add_argument('--num-epochs', type=int, default=100)
 parser.add_argument('--decoder-hidden-size', help="Hidden size for lstm", type=int, default=512)
 parser.add_argument('--experiment-name', type=str, default="autobestmodel")
+parser.add_argument('--num-tf-layers', help="Number of transformer layers", type=int, default=3)
+parser.add_argument('--num-heads', help="Number of heads", type=int, default=2)
+parser.add_argument('--beta1', help="Beta1 for Adam", type=float, default=0.9)
+parser.add_argument('--beta2', help="Beta2 for Adam", type=float, default=0.999)
 
 args = parser.parse_args()
 
 encoder_type = args.encoder_type
 decoder_type = args.decoder_type #transformer, rnn
 warmup_steps = 4000
+n_iter = 1
 
 if encoder_type == 'resnet18':
     CNN_channels = 512 #DO SOMETHING ABOUT THIS, 2048 for resnet101
@@ -288,8 +293,10 @@ else:
 
 batch_size = args.batch_size
 grad_clip = 5.
-transformer_layers = 6
-heads = 3
+transformer_layers = args.num_tf_layers
+heads = args.num_heads
+beta1 = args.beta1
+beta2 = args.beta2
 
 use_checkpoint = False
 checkpoint_path = 'best_model17.pt'
@@ -319,13 +326,13 @@ model = EncoderDecoder(encoder_class, decoder_class, train_data.vocab_size, targ
                        word_embedding_size=word_embedding_size, attention_dim=attention_dim, decoder_type=decoder_type, cell_type='lstm', beam_width=beam_width, dropout=dropout,
                        transformer_layers=transformer_layers, num_heads=heads)
 
-# optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.9, 0.98))
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(beta1, beta2)) # used to experiment with (0.9, 0.98) for transformer
+# optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 fixed_image = "2090545563_a4e66ec76b.jpg"
 
 if mode == "train":
-    n_iter = 1
+    
     best_bleu4 = 0.
     poor_iters = 0
     epoch = 1
