@@ -7,7 +7,7 @@ class Encoder(nn.Module):
     """
     Encoder.
     """
-    def __init__(self, model_type, encoded_image_size=14):
+    def __init__(self, model_type, encoded_image_size=14, fine_tune=False):
         super(Encoder, self).__init__()
         self.enc_image_size = encoded_image_size
         model = getattr(models, model_type)
@@ -20,7 +20,7 @@ class Encoder(nn.Module):
         # Resize image to fixed size to allow input images of variable size
         self.adaptive_pool = nn.AdaptiveAvgPool2d((encoded_image_size, encoded_image_size))
 
-        self.fine_tune()
+        self.fine_tune(fine_tune)
 
     def forward(self, images):
         """
@@ -42,10 +42,9 @@ class Encoder(nn.Module):
         for p in self.resnet.parameters():
             p.requires_grad = False
         # If fine-tuning, only fine-tune convolutional blocks 2 through 4
-        for c in list(self.resnet.children())[5:]:
+        for c in list(self.resnet.children())[-1]:
             for p in c.parameters():
                 p.requires_grad = fine_tune
-
 
 
 class AdditiveAttention(nn.Module):
@@ -456,7 +455,7 @@ class EncoderDecoder(nn.Module):
 
     def __init__(
             self, encoder_class, decoder_class,
-            target_vocab_size, target_sos=-2, target_eos=-1, encoder_type='resnet18', encoder_hidden_size=512,
+            target_vocab_size, target_sos=-2, target_eos=-1, encoder_type='resnet18', fine_tune=False, encoder_hidden_size=512,
             decoder_hidden_size=1024, word_embedding_size=1024, attention_dim=512, cell_type='lstm', decoder_type='rnn', beam_width=4, dropout=0.0,
             transformer_layers=3, num_heads=1):
         '''Initialize the encoder decoder combo
@@ -466,6 +465,7 @@ class EncoderDecoder(nn.Module):
         self.target_sos = target_sos
         self.target_eos = target_eos
         self.encoder_type = encoder_type
+        self.fine_tune = fine_tune
         self.encoder_hidden_size = encoder_hidden_size
         self.decoder_hidden_size = decoder_hidden_size
         self.word_embedding_size = word_embedding_size
@@ -482,7 +482,7 @@ class EncoderDecoder(nn.Module):
     def init_submodules(self, encoder_class, decoder_class):
         '''Initialize encoder and decoder submodules
         '''
-        self.encoder = encoder_class(self.encoder_type)
+        self.encoder = encoder_class(self.encoder_type, fine_tune=self.fine_tune)
         if self.decoder_type == 'rnn':
             self.decoder = decoder_class(self.target_vocab_size, 
                                     self.target_eos, 
