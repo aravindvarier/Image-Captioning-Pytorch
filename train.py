@@ -13,6 +13,8 @@ import eval
 import bleu
 import utils
 import string
+import copy
+import argparse
 
 from models import *
 
@@ -218,7 +220,7 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
             logits, total_attention_weights = model(images, captions) #total_attention_weights -> (L, N, 1)
             total_attention_weights = total_attention_weights.sum(axis=0).squeeze(2).T
         else:
-            logits = model(images, captions)
+            logits = model(images, captions).permute(1, 0, 2)
 
         captions = captions[1:]
         mask = model.get_target_padding_mask(captions)
@@ -242,12 +244,33 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
     return total_loss/total_num, n_iter
 
 
-decoder_type = 'rnn' #transformer, rnn
+parser = argparse.ArgumentParser(description='Training Script for Encoder+LSTM decoder')
+parser.add_argument('--lr', type=int, help='learning rate', default=0.0001)
+parser.add_argument('--batch-size', type=int, help='batch size', default=64)
+parser.add_argument('--encoder-type', choices=['resnet18', 'resnet50', 'resnet101'], default='resnet18',
+                    help='Network to use in the encoder (default: resnet18)')
+parser.add_argument('--decoder-type', choices=['rnn', 'transformer'], default='rnn')
+parser.add_argument('--beam-width', type=int, default=4)
+parser.add_argument('--num-epochs', type=int, default=100)
+parser.add_argument('--decoder-hidden-size', help="Hidden size for lstm", type=int, default=512)
+parser.add_argument('--experiment-name', type=str, default="autobestmodel")
+
+args = parser.parse_args()
+
+encoder_type = args.encoder_type
+decoder_type = args.decoder_type #transformer, rnn
 warmup_steps = 4000
 
-CNN_channels = 2048 #DO SOMETHING ABOUT THIS, 2048 for resnet101
-max_epochs = 20
-beam_width = 4
+if encoder_type == 'resnet18':
+    CNN_channels = 512 #DO SOMETHING ABOUT THIS, 2048 for resnet101
+else:
+    CNN_channels = 2048
+
+max_epochs = args.num_epochs
+beam_width = args.beam_width
+
+print("Epochs are read correctly: ", max_epochs)
+print("encoder type is read correctly", encoder_type)
 
 word_embedding_size = 512
 attention_dim = 512
@@ -255,21 +278,21 @@ model_save_path = './model_saves/'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 lamda = 1.
 if decoder_type == 'rnn':
-    learning_rate = 0.0001
-    decoder_hidden_size = 1800
+    learning_rate = args.lr
+    decoder_hidden_size = args.decoder_hidden_size
     dropout = 0.5
 else:    
     learning_rate = (word_embedding_size**(-0.5)) * min(n_iter**(-0.5), n_iter*(warmup_steps**(-1.5)))
     decoder_hidden_size = CNN_channels
     dropout = 0.1
 
-batch_size = 80
+batch_size = args.batch_size
 grad_clip = 5.
 transformer_layers = 6
 heads = 3
 
 use_checkpoint = False
-checkpoint_path = 'epoch7.pt'
+checkpoint_path = 'best_model17.pt'
 mode = 'train'
 
 if not os.path.isdir(model_save_path):
@@ -291,7 +314,7 @@ else:
     decoder_class = TransformerDecoder
 
 model = EncoderDecoder(encoder_class, decoder_class, train_data.vocab_size, target_sos=train_data.SOS, 
-                      target_eos=train_data.EOS, encoder_hidden_size=CNN_channels, 
+                      target_eos=train_data.EOS, encoder_type=args.encoder_type, encoder_hidden_size=CNN_channels, 
                        decoder_hidden_size=decoder_hidden_size, 
                        word_embedding_size=word_embedding_size, attention_dim=attention_dim, decoder_type=decoder_type, cell_type='lstm', beam_width=beam_width, dropout=dropout,
                        transformer_layers=transformer_layers, num_heads=heads)
@@ -306,13 +329,18 @@ if mode == "train":
     best_bleu4 = 0.
     poor_iters = 0
     epoch = 1
-    num_iters_change_lr = 2
+    num_iters_change_lr = 4
     max_poor_iters = 10
+    best_model = None
+    best_optimizer = None
+    best_loss = None
+    best_epoch = None
 
     if use_checkpoint:
         checkpoint = torch.load(model_save_path + checkpoint_path)
         model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         epoch = checkpoint['epoch']
         loss = checkpoint['loss']
         print("Loss of checkpoint model: ", loss)
@@ -332,37 +360,60 @@ if mode == "train":
         if is_epoch_better:
             poor_iters = 0
             best_bleu4 = metrics['Bleu_4']
+            best_model = copy.deepcopy(model)
+            best_epoch = epoch
+            best_optimizer = optimizer
+            best_loss = loss
         else:
             poor_iters += 1
-        if poor_iters > 0 and poor_iters % num_iters_change_lr == 0:
-            print("Adjusting learning rate on epoch ", epoch)
-            utils.adjust_learning_rate(optimizer, 0.6)
+        # if poor_iters > 0 and poor_iters % num_iters_change_lr == 0:
+        #     print("Adjusting learning rate on epoch ", epoch)
+        #     utils.adjust_learning_rate(optimizer, 0.6)
         if poor_iters > max_poor_iters:
-            print("Hasn't improved for 10 epochs...I give up :(")
+            print("Hasn't improved for 100 epochs...I give up :(")
+            print(f"Saving Best Model with Bleu_4 score of {best_bleu4}")
+            torch.save({
+                        "model_state_dict": best_model.state_dict(),
+                        "optimizer_state_dict": best_optimizer.state_dict(),
+                        "epoch": best_epoch,
+                        "loss": best_loss,
+                        "best_bleu4": best_bleu4
+                        }, model_save_path + f'{args.experiment_name}.pt')
             break
         print("Predicted caption: ",predict(model, device, fixed_image))
         
         # SAVE MODEL EVERY 10 EPOCHS
-        if epoch > 4 and is_epoch_better:
+        if epoch % 10 == 0:
             model.cpu()
-            print('Saving Model on Epoch', epoch)
+            print(f"Saving Best Model with Bleu_4 score of {best_bleu4}")
             torch.save({
-                        "model_state_dict": model.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "epoch": epoch,
-                        "loss": loss
-                        }, model_save_path + f'epoch{epoch}.pt')
+                        "model_state_dict": best_model.state_dict(),
+                        "optimizer_state_dict": best_optimizer.state_dict(),
+                        "epoch": best_epoch,
+                        "loss": best_loss,
+                        "best_bleu4": best_bleu4
+                        }, model_save_path + f'{args.experiment_name}.pt')
             
         epoch += 1
         if epoch > max_epochs:
+            print(f"Saving Best Model with Bleu_4 score of {best_bleu4}")
+            torch.save({
+                        "model_state_dict": best_model.state_dict(),
+                        "optimizer_state_dict": best_optimizer.state_dict(),
+                        "epoch": best_epoch,
+                        "loss": best_loss,
+                        "best_bleu4": best_bleu4
+                        }, model_save_path + f'{args.experiment_name}.pt')
             print(f'Finished {max_epochs} epochs')
         torch.cuda.empty_cache()
 elif mode == "test":
     checkpoint = torch.load(model_save_path + checkpoint_path)
+    # print("This model has bleu4 of: ", checkpoint['best_bleu4'])
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(device)
     model.eval()
     # predict(model, device, fixed_image)
     print(eval.get_pycoco_metrics(model, device, val_data, val_dataloader))
     
+
 
