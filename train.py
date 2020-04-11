@@ -220,7 +220,7 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
             logits, total_attention_weights = model(images, captions) #total_attention_weights -> (L, N, 1)
             total_attention_weights = total_attention_weights.sum(axis=0).squeeze(2).T
         else:
-            logits = model(images, captions)
+            logits = model(images, captions).permute(1, 0, 2)
 
         captions = captions[1:]
         mask = model.get_target_padding_mask(captions)
@@ -263,8 +263,6 @@ warmup_steps = 4000
 
 if encoder_type == 'resnet18':
     CNN_channels = 512 #DO SOMETHING ABOUT THIS, 2048 for resnet101
-elif encoder_type == 'resnet50':
-    CNN_channels = 1024
 else:
     CNN_channels = 2048
 
