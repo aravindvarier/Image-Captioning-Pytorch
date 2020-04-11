@@ -14,6 +14,7 @@ import bleu
 import utils
 import string
 import copy
+import argparse
 
 from models import *
 
@@ -243,12 +244,35 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
     return total_loss/total_num, n_iter
 
 
-decoder_type = 'rnn' #transformer, rnn
+parser = argparse.ArgumentParser(description='Training Script for Encoder+LSTM decoder')
+parser.add_argument('--lr', type=int, help='learning rate', default=0.0001)
+parser.add_argument('--batch-size', type=int, help='batch size', default=64)
+parser.add_argument('--encoder-type', choices=['resnet18', 'resnet50', 'resnet101'], default='resnet18',
+                    help='Network to use in the encoder (default: resnet18)')
+parser.add_argument('--decoder-type', choices=['rnn', 'transformer'], default='rnn')
+parser.add_argument('--beam-width', type=int, default=4)
+parser.add_argument('--num-epochs', type=int, default=100)
+parser.add_argument('--decoder-hidden-size', help="Hidden size for lstm", type=int, default=512)
+parser.add_argument('--experiment-name', type=str, default="autobestmodel")
+
+args = parser.parse_args()
+
+encoder_type = args.encoder_type
+decoder_type = args.decoder_type #transformer, rnn
 warmup_steps = 4000
 
-CNN_channels = 512 #DO SOMETHING ABOUT THIS, 2048 for resnet101
-max_epochs = 100
-beam_width = 4
+if encoder_type == 'resnet18':
+    CNN_channels = 512 #DO SOMETHING ABOUT THIS, 2048 for resnet101
+elif encoder_type == 'resnet50':
+    CNN_channels = 1024
+else:
+    CNN_channels = 2048
+
+max_epochs = args.num_epochs
+beam_width = args.beam_width
+
+print("Epochs are read correctly: ", max_epochs)
+print("encoder type is read correctly", encoder_type)
 
 word_embedding_size = 512
 attention_dim = 512
@@ -256,15 +280,15 @@ model_save_path = './model_saves/'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 lamda = 1.
 if decoder_type == 'rnn':
-    learning_rate = 0.0001
-    decoder_hidden_size = 512
+    learning_rate = args.lr
+    decoder_hidden_size = args.decoder_hidden_size
     dropout = 0.5
 else:    
     learning_rate = (word_embedding_size**(-0.5)) * min(n_iter**(-0.5), n_iter*(warmup_steps**(-1.5)))
     decoder_hidden_size = CNN_channels
     dropout = 0.1
 
-batch_size = 64
+batch_size = args.batch_size
 grad_clip = 5.
 transformer_layers = 6
 heads = 3
@@ -292,7 +316,7 @@ else:
     decoder_class = TransformerDecoder
 
 model = EncoderDecoder(encoder_class, decoder_class, train_data.vocab_size, target_sos=train_data.SOS, 
-                      target_eos=train_data.EOS, encoder_hidden_size=CNN_channels, 
+                      target_eos=train_data.EOS, encoder_type=args.encoder_type, encoder_hidden_size=CNN_channels, 
                        decoder_hidden_size=decoder_hidden_size, 
                        word_embedding_size=word_embedding_size, attention_dim=attention_dim, decoder_type=decoder_type, cell_type='lstm', beam_width=beam_width, dropout=dropout,
                        transformer_layers=transformer_layers, num_heads=heads)
@@ -356,7 +380,7 @@ if mode == "train":
                         "epoch": best_epoch,
                         "loss": best_loss,
                         "best_bleu4": best_bleu4
-                        }, model_save_path + f'autobestmodel.pt')
+                        }, model_save_path + f'{args.experiment_name}.pt')
             break
         print("Predicted caption: ",predict(model, device, fixed_image))
         
@@ -370,7 +394,7 @@ if mode == "train":
                         "epoch": best_epoch,
                         "loss": best_loss,
                         "best_bleu4": best_bleu4
-                        }, model_save_path + f'autobestmodel.pt')
+                        }, model_save_path + f'{args.experiment_name}.pt')
             
         epoch += 1
         if epoch > max_epochs:
@@ -381,7 +405,7 @@ if mode == "train":
                         "epoch": best_epoch,
                         "loss": best_loss,
                         "best_bleu4": best_bleu4
-                        }, model_save_path + f'autobestmodel.pt')
+                        }, model_save_path + f'{args.experiment_name}.pt')
             print(f'Finished {max_epochs} epochs')
         torch.cuda.empty_cache()
 elif mode == "test":
