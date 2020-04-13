@@ -29,6 +29,9 @@ vocab_file = './vocab.txt'
 SEED = 123
 torch.manual_seed(SEED)
 
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 class Flickr8kDataset(Dataset):
     """Flickr8k dataset."""
     
@@ -305,7 +308,7 @@ print("Epochs are read correctly: ", max_epochs)
 print("Encoder type is read correctly: ", encoder_type)
 print("Number of CNN channels being used: ", CNN_channels)
 print("Fine tune setting is set to: ", bool(args.fine_tune))
-print("Label smoothing set to: ", bool(args.smoothing))
+
 
 word_embedding_size = 512
 attention_dim = 512
@@ -316,7 +319,8 @@ if decoder_type == 'rnn':
     learning_rate = args.lr
     decoder_hidden_size = args.decoder_hidden_size
     dropout = args.dropout_lstm
-else:    
+else: 
+    print("Label smoothing set to: ", bool(args.smoothing))   
     learning_rate = 0.00004
     # learning_rate = (CNN_channels**(-0.5)) * min(n_iter**(-0.5), n_iter*(warmup_steps**(-1.5)))
     decoder_hidden_size = CNN_channels
@@ -411,7 +415,7 @@ if mode == "train":
         #     print("Adjusting learning rate on epoch ", epoch)
         #     utils.adjust_learning_rate(optimizer, 0.6)
         if poor_iters > max_poor_iters:
-            print("Hasn't improved for 100 epochs...I give up :(")
+            print("Hasn't improved for ", max_poor_iters, " epochs...I give up :(")
             test_metrics = eval.get_pycoco_metrics(best_model, device, test_data, test_dataloader)
             utils.save_model_and_result(model_save_path, args.experiment_name, best_model, decoder_type, best_optimizer, best_epoch, best_bleu4, best_loss, best_metrics, test_metrics)
             break
