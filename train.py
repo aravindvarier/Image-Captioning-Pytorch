@@ -198,7 +198,7 @@ def adjust_optim(optimizer, n_iter, warmup_steps):
 
 
 
-def train_for_epoch(model, dataloader, optimizer, device, n_iter):
+def train_for_epoch(model, dataloader, optimizer, device, n_iter, args):
     '''Train an EncoderDecoder for an epoch
 
     Returns
@@ -230,7 +230,27 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
             loss2 = criterion2(total_attention_weights, torch.ones_like(total_attention_weights))
             loss = loss1 + lamda * loss2
         else:
-            loss = loss1
+            if args.smoothing:
+                eps = args.Lepsilon
+                captions = captions.masked_fill(mask,0) #just to make the scatter work so no indexing issue occurs
+                gold = captions.contiguous().view(-1)
+
+                logits = torch.flatten(logits, 0, 1)
+                n_class = logits.shape[-1]
+                one_hot = torch.zeros_like(logits, device=logits.device).scatter(1, gold.view(-1, 1), 1)
+                one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
+                log_prb = torch.log_softmax(logits, dim=1)
+
+                captions = captions.masked_fill(mask,-1) #puttng the right mask back on
+                gold = captions.contiguous().view(-1)
+                non_pad_mask = gold.ne(-1)
+
+                loss = -(one_hot * log_prb).sum(dim=1)
+                loss = loss.masked_select(non_pad_mask).sum()  # average later
+
+                del gold, log_prb, non_pad_mask #hoping that this saves a bit of memory
+            else:
+                loss = loss1
         total_loss += loss.item()
         total_num += len(cap_lens)
         # print(total_loss/total_num)
@@ -238,15 +258,17 @@ def train_for_epoch(model, dataloader, optimizer, device, n_iter):
         if grad_clip is not None:
             clip_gradient(optimizer, grad_clip)
         optimizer.step()
-        if model.decoder_type == 'transformer':
-            adjust_optim(optimizer, n_iter, warmup_steps)
+        # if model.decoder_type == 'transformer':
+        #     adjust_optim(optimizer, n_iter, warmup_steps)
         n_iter += 1
+        torch.cuda.empty_cache()
     return total_loss/total_num, n_iter
 
 
 parser = argparse.ArgumentParser(description='Training Script for Encoder+LSTM decoder')
-parser.add_argument('--lr', type=int, help='learning rate', default=0.0001)
+parser.add_argument('--lr', type=float, help='learning rate', default=0.0001)
 parser.add_argument('--batch-size', type=int, help='batch size', default=64)
+parser.add_argument('--batch-size-val', type=int, help='batch size validation', default=64)
 parser.add_argument('--encoder-type', choices=['resnet18', 'resnet50', 'resnet101'], default='resnet18',
                     help='Network to use in the encoder (default: resnet18)')
 parser.add_argument('--fine-tune', type=int, choices=[0,1], default=0)
@@ -259,6 +281,10 @@ parser.add_argument('--num-tf-layers', help="Number of transformer layers", type
 parser.add_argument('--num-heads', help="Number of heads", type=int, default=2)
 parser.add_argument('--beta1', help="Beta1 for Adam", type=float, default=0.9)
 parser.add_argument('--beta2', help="Beta2 for Adam", type=float, default=0.999)
+parser.add_argument('--dropout-lstm', help="Dropout_LSTM", type=float, default=0.5)
+parser.add_argument('--dropout-trans', help="Dropout_Trans", type=float, default=0.1)
+parser.add_argument('--smoothing', help="Label smoothing", type=int, default=1)
+parser.add_argument('--Lepsilon', help="Label smoothing epsilon", type=float, default=0.1)
 
 args = parser.parse_args()
 
@@ -276,8 +302,10 @@ max_epochs = args.num_epochs
 beam_width = args.beam_width
 
 print("Epochs are read correctly: ", max_epochs)
-print("encoder type is read correctly", encoder_type)
+print("Encoder type is read correctly: ", encoder_type)
+print("Number of CNN channels being used: ", CNN_channels)
 print("Fine tune setting is set to: ", bool(args.fine_tune))
+print("Label smoothing set to: ", bool(args.smoothing))
 
 word_embedding_size = 512
 attention_dim = 512
@@ -287,13 +315,15 @@ lamda = 1.
 if decoder_type == 'rnn':
     learning_rate = args.lr
     decoder_hidden_size = args.decoder_hidden_size
-    dropout = 0.5
+    dropout = args.dropout_lstm
 else:    
-    learning_rate = (word_embedding_size**(-0.5)) * min(n_iter**(-0.5), n_iter*(warmup_steps**(-1.5)))
+    learning_rate = 0.00004
+    # learning_rate = (CNN_channels**(-0.5)) * min(n_iter**(-0.5), n_iter*(warmup_steps**(-1.5)))
     decoder_hidden_size = CNN_channels
-    dropout = 0.1
+    dropout = args.dropout_trans
 
 batch_size = args.batch_size
+batch_size_val = args.batch_size_val
 grad_clip = 5.
 transformer_layers = args.num_tf_layers
 heads = args.num_heads
@@ -313,8 +343,8 @@ test_data = eval.TestDataset(img_dir, test_dir, ann_dir, vocab_file)
 
 
 train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=collater)
-val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False, collate_fn=eval.collater)
-test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False, collate_fn=eval.collater)
+val_dataloader = DataLoader(val_data, batch_size=batch_size_val, shuffle=False, collate_fn=eval.collater)
+test_dataloader = DataLoader(test_data, batch_size=batch_size_val, shuffle=False, collate_fn=eval.collater)
 
 encoder_class = Encoder
 if decoder_type == 'rnn':
@@ -339,7 +369,7 @@ if mode == "train":
     poor_iters = 0
     epoch = 1
     num_iters_change_lr = 4
-    max_poor_iters = 1
+    max_poor_iters = 10
     best_model = None
     best_optimizer = None
     best_loss = None
@@ -354,11 +384,11 @@ if mode == "train":
         epoch = checkpoint['epoch']
         loss = checkpoint['loss']
         print("Loss of checkpoint model: ", loss)
+    model.to(device)
     print("Ground Truth captions: ", [" ".join(caption) for caption in val_data.all_captions[fixed_image]])
     while epoch <= max_epochs:
-        model.to(device)
         model.train()
-        loss, n_iter = train_for_epoch(model, train_dataloader, optimizer, device, n_iter)
+        loss, n_iter = train_for_epoch(model, train_dataloader, optimizer, device, n_iter, args)
         
 
         # EVALUATE AND ADJUST LR ACCORDINGLY
@@ -372,7 +402,7 @@ if mode == "train":
             best_bleu4 = metrics['Bleu_4']
             best_model = copy.deepcopy(model)
             best_epoch = copy.deepcopy(epoch)
-            best_optimizer = copy.deepcopy(optimizer)
+            # best_optimizer = copy.deepcopy(optimizer)
             best_loss = copy.deepcopy(loss)
             best_metrics = copy.deepcopy(metrics)
         else:
@@ -405,7 +435,7 @@ elif mode == "test":
     model.to(device)
     model.eval()
     # predict(model, device, fixed_image)
-    print(eval.get_pycoco_metrics(model, device, val_data, val_dataloader))
+    print(eval.get_pycoco_metrics(model, device, test_data, test_dataloader))
     
 
 

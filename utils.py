@@ -43,7 +43,7 @@ def save_model_and_result(save_path, experiment, model, decoder_type, optimizer,
     print(f"Saving Best Model with Bleu_4 score of {bleu4}")
     torch.save({
                 "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
+                # "optimizer_state_dict": optimizer.state_dict(),
                 "epoch": best_epoch,
                 "loss": loss,
                 "best_bleu4": bleu4

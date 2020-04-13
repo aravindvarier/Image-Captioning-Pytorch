@@ -29,7 +29,7 @@ class Encoder(nn.Module):
         :return: encoded images
         """
         out = self.resnet(images)  # (batch_size, 2048, image_size/32, image_size/32)
-        # out = self.adaptive_pool(out)  # (batch_size, 2048, encoded_image_size, encoded_image_size)
+        out = self.adaptive_pool(out)  # (batch_size, 2048, encoded_image_size, encoded_image_size)
         out = torch.flatten(out,2,3)  #(batch_size, 2048, encoded_image_size * encoded_image_size)
         out = out.permute(2, 0, 1)  # (encoded_image_size * encoded_image_size, batch_size, 2048)
         return out
@@ -380,6 +380,7 @@ class TransformerDecoder(nn.Module):
 
         # THIS LINE WAS ADDED AS A CORRECTION. 
         embed = embed + self.positional_encodings[:seq_len]
+        embed = self.dropout(embed)
 
         encoder_attention_weights_list = []
         self_attention_weights_list = []
@@ -605,7 +606,7 @@ class EncoderDecoder(nn.Module):
                         f'Beam search has not finished by t={t}. Increase the '
                         f'number of parameters and train longer')
                 elif on_max == 'halt':
-                    warnings.warn(f'Beam search not finished by t={t}. Halted')
+                    print(f'Beam search not finished by t={t}. Halted')
                     break
             finished = (b_tm1_1[-1] == self.target_eos)
             if self.decoder_type == 'rnn':
