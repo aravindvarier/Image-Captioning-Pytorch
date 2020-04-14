@@ -2,3 +2,4 @@
 /proj_env
 /__pycache__
 /model_saves
+*.sh
