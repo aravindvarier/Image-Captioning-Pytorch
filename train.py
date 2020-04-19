@@ -288,6 +288,8 @@ parser.add_argument('--dropout-lstm', help="Dropout_LSTM", type=float, default=0
 parser.add_argument('--dropout-trans', help="Dropout_Trans", type=float, default=0.1)
 parser.add_argument('--smoothing', help="Label smoothing", type=int, default=1)
 parser.add_argument('--Lepsilon', help="Label smoothing epsilon", type=float, default=0.1)
+parser.add_argument('--use-checkpoint', help="Use checkpoint or start from beginning", type=int, default=0)
+parser.add_argument('--checkpoint-name', help="Checkpoint model file name", type=str, default=None)
 
 args = parser.parse_args()
 
@@ -334,8 +336,8 @@ heads = args.num_heads
 beta1 = args.beta1
 beta2 = args.beta2
 
-use_checkpoint = False
-checkpoint_path = 'best_model17.pt'
+use_checkpoint = args.use_checkpoint
+checkpoint_path = args.checkpoint_name
 mode = 'train'
 
 if not os.path.isdir(model_save_path):
