@@ -67,7 +67,44 @@ python train.py --encoder-type resnet101 --experiment-name resnet101_h512_bs32_f
   ```
   
 ### CNN + Transformer
-TODO
+There were a total of 3 experiments performed for this architecture.
+
+1. Effect of larger CNN models on caption quality (ResNet18, ResNet50, and ResNet101):
+```
+python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 1 --num-tf-layers 3  --experiment-name resnet18_bs64_ft0_l3_h1
+python train.py --encoder-type resnet50 --decoder-type transformer --num-heads 1 --num-tf-layers 3  --experiment-name resnet18_bs64_ft0_l3_h1
+python train.py --encoder-type resnet101 --decoder-type transformer --num-heads 1 --num-tf-layers 3  --experiment-name resnet18_bs64_ft0_l3_h1
+```
+
+2. Effect of finetuning on caption quality (ResNet18, ResNet50, and ResNet101):
+```
+python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 1 --num-tf-layers 3  --fine-tune 1 --experiment-name resnet18_bs64_ft1_l3_h1
+python train.py --encoder-type resnet50 --decoder-type transformer --num-heads 1 --num-tf-layers 3  --fine-tune 1 --experiment-name resnet18_bs64_ft1_l3_h1
+python train.py --encoder-type resnet101 --decoder-type transformer --num-heads 1 --num-tf-layers 3 --fine-tune 1 --experiment-name resnet18_bs64_ft1_l3_h1
+```
+
+3. Effect of varying number of transformer layers and heads (keeping encoder fixed as ResNet18 and varying decoder):
+
+* Using 1 Head:
+    ```
+    python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 1 --num-tf-layers 3 --experiment-name resnet18_bs64_ft0_l3_h1
+    python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 1 --num-tf-layers 5 --experiment-name resnet18_bs64_ft0_l5_h1
+    python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 1 --num-tf-layers 7 --experiment-name resnet18_bs64_ft0_l7_h1
+    ```
+
+* Using 2 Head:
+    ```
+    python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 2 --num-tf-layers 3 --experiment-name resnet18_bs64_ft0_l3_h2
+    python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 2 --num-tf-layers 5 --experiment-name resnet18_bs64_ft0_l5_h2
+    python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 2 --num-tf-layers 7 --experiment-name resnet18_bs64_ft0_l7_h2
+    ```
+* Using 3 Head:
+    ```
+    python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 3 --num-tf-layers 3 --experiment-name resnet18_bs64_ft0_l3_h3
+    python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 3 --num-tf-layers 5 --experiment-name resnet18_bs64_ft0_l5_h3
+    python train.py --encoder-type resnet18 --decoder-type transformer --num-heads 3 --num-tf-layers 7 --experiment-name resnet18_bs64_ft0_l7_h3
+    ```
+
 
 ## Results Visualization Notebooks
 1. CNN+LSTM: https://github.com/aravindvarier/Image-Captioning-Pytorch/blob/master/experiments/CNN%2BLSTM_Results.ipynb
