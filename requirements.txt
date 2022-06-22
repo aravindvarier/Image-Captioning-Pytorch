@@ -3,7 +3,7 @@ Cython==0.29.16
 kiwisolver==1.2.0
 matplotlib==3.2.1
 nltk==3.4.5
-numpy==1.18.2
+numpy==1.22.0
 Pillow==8.1.1
 pkg-resources==0.0.0
 pycocoevalcap==1.1
