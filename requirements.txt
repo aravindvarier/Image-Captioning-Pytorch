@@ -11,6 +11,6 @@ pycocotools==2.0.0
 pyparsing==2.4.6
 python-dateutil==2.8.1
 six==1.14.0
-torch==1.4.0
+torch==1.13.1
 torchvision==0.5.0
 tqdm==4.45.0
